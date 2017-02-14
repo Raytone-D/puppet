@@ -94,7 +94,7 @@ class unity():
         
         keystroke(self.two_way, ord(key))    # 切换到持仓('W')、成交('E')、委托('R')
         sleep(0.8)    # 等待券商的数据返回...
-        op.SendMessageW(self.custom, WM_COMMAND, 57634, 0, self.path_custom[-1])    # background mode
+        op.SendMessageW(self.custom, WM_COMMAND, 57634, self.path_custom[-1])    # background mode
         
         return pyperclip.paste()
         
@@ -125,7 +125,7 @@ def to_dict(raw):
 if __name__ == '__main__':
 
     myRegister = {'券商登录号': '自定义名称',   \
-                  '61770': '东方不败', \
+                  '617145470': '东方不败', \
                   '45645464682532': '张无忌',   \
                   '74378458454548': '钢铁侠',   \
                   '84482525525038': '李寻欢',   \
