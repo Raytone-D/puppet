@@ -1,5 +1,6 @@
-扯线木偶（puppet）
--- 用ctypes模块写的同花顺交易端遥控木偶。
+扯线木偶（puppetrader unity for ths client）
+
+-- 用ctypes模块写的同花顺交易客户端遥控木偶。
 
 2017/2/14 0.2版发布！提供后台获取持仓数据。鸣谢网友liuyukuan博文中提供的AHK代码“SendMessage,0x111,57634,0,CVirtualGridCtrl2,同花顺”。
 
