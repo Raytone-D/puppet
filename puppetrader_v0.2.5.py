@@ -1,7 +1,7 @@
 """puppetrader for ths client uniform"""
 __author__ =  '睿瞳深邃(https://github.com/Raytone-D)'
 __project__ = '扯线木偶(puppetrader for ths client unity)'
-__version__ = "0.2"
+__version__ = "0.2.5"
 '推荐使用：anaconda3 最新版，或者Python >= 3.6'
 # coding: utf-8
 
@@ -46,6 +46,18 @@ class unity():
         self.account = reduce(op.GetDlgItem, (59392, 0, 1711), main)
         op.SendMessageW(self.account, WM_GETTEXT, 32, self.buff)
         self.account = self.buff.value
+        # 撤单工具条
+        self.id_toolbar = {'全选': 1098, \
+                           '撤单': 1099, \
+                           '全撤': 30001, \
+                           '撤买': 30002, \
+                           '撤卖': 30003, \
+                           '填单': 3348, \
+                           '查单': 3349} #'撤尾单': 2053, '撤相同': 30022}    # 华泰独有
+                      
+        op.SendMessageW(main, WM_COMMAND, 163, 0)
+        self.cancel_panel = reduce(op.GetDlgItem, (59648, 59649), main)
+        self.cancel_toolbar = {k: op.GetDlgItem(self.cancel_panel, v) for k, v in self.id_toolbar.items()}
 
     def buy(self, symbol, price, qty):   # 买入(B)
         # buy = order('b')
@@ -60,15 +72,17 @@ class unity():
         op.SendMessageW(self.members[1058], WM_SETTEXT, 0, price)
         op.SendMessageW(self.members[1039], WM_SETTEXT, 0, qty)
         op.PostMessageW(self.two_way, WM_COMMAND, 1008, self.members[1008])
-        op.GetDlgItemTextW(self.members[1019], self.buff, 32)
-        print(self.buff.value)
 
     def refresh(self):    # 刷新(F5)
         op.PostMessageW(self.two_way, WM_COMMAND, 32790, self.members[32790])
         
-    def cancel(self, way=0):    # 撤销下单
-        pass
-        
+    def cancel_order(self, symbol=''):    # 撤单
+        if symbol:
+            op.SendMessageW(self.cancel_toolbar['填单'], WM_SETTEXT, 0, symbol)
+            sleep(0.1)    # 必须有
+            op.PostMessageW(self.cancel_panel, WM_COMMAND, self.id_toolbar['查单'], self.cancel_toolbar['查单'])
+            op.PostMessageW(self.cancel_panel, WM_COMMAND, self.id_toolbar['撤单'], self.cancel_toolbar['撤单'])
+            
     def cancelAll(self):    # 全撤(Z)
         op.PostMessageW(self.two_way, WM_COMMAND, 30001, self.members[30001])
         
@@ -142,12 +156,13 @@ if __name__ == '__main__':
                    for solo in trader}
                    
         print(profile)
-        print(json.dumps(profile, indent=4, ensure_ascii=False, sort_keys=True))
+        #print(json.dumps(profile, indent=4, ensure_ascii=False, sort_keys=True))
         
         raw = trader['东方不败'].get_data()    # 只能“大写字母”，小写字母THS会崩溃，无语！
-        print(to_dict(raw))
+        #print(to_dict(raw))
         
         raw = trader['东方不败'].get_data('R')
         print(json.dumps(to_dict(raw), indent=4, ensure_ascii=False))
+        trader['东方不败'].cancel_order('')
     
     else: print("老板，没发现已登录的交易端！")
