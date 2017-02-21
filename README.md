@@ -6,6 +6,10 @@
 
 2017/2/14 v0.2版发布！提供后台获取持仓数据。鸣谢网友liuyukuan博文中提供的AHK代码“SendMessage,0x111,57634,0,CVirtualGridCtrl2,同花顺”。
 
+Windows下不需要安装、配置。
+
+Linux下需要安装最新版本的Wine，环境设为Windows 7，先安装同花顺交易客户端，能正常使用之后再安装Python for Windows。启动wineconsole，pip install pyperclip，之后就可以正常使用了。
+
 1、支持同花顺的“所有”交易客户端：官方统一版或老版、券商定制版（银河、国泰君安、华泰、广发、东方财富等）。
 
 2、支持多种交易模式：同一券商多个账户、多个券商多个账户同时登录一个（或多个）交易端，并且同时进行交易。
