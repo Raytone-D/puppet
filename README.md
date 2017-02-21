@@ -1,6 +1,8 @@
 扯线木偶（puppetrader unity for ths client）
 
--- 用ctypes模块写的同花顺交易客户端遥控木偶。
+>>> 用Python内置的ctypes将同花顺交易客户端的常用操作包装成API。<<<
+
+推荐使用最新版的Anaconda3，或者Python >= 3.5。
 
 2017/2/21 v0.2.5发布！增加撤单（指定股票代码）功能。
 
