@@ -1,13 +1,13 @@
 """puppetrader for ths client uniform"""
 __author__ =  '睿瞳深邃(https://github.com/Raytone-D)'
 __project__ = '扯线木偶(puppetrader for ths client unity)'
-__version__ = "0.2.5"
+__version__ = "0.3"
 '推荐使用：anaconda3 最新版，或者Python >= 3.6'
 # coding: utf-8
 
 import ctypes
-from time import sleep
 from functools import reduce
+import time
 import pyperclip
 import json
 
@@ -18,6 +18,7 @@ F1,   F2,   F3,    F4,    F5,    F6 = \
 112,  113,  114,   115,   116,   117       # keyCode(按键代码)
 
 op = ctypes.windll.user32
+wait_a_second = lambda sec= 0.1: time.sleep(sec)
 
 def keystroke(hCtrl, keyCode, param=0):   # 单击
     op.PostMessageW(hCtrl, WM_KEYDOWN, keyCode, param)
@@ -28,9 +29,9 @@ class unity():
     
     def __init__(self, main):
     
+        self.main = main
         keystroke(main, F6)    # 切换到双向委托
-        
-        sleep(0.1)    # 可调整区间值(0.01~0.5)
+        wait_a_second()    # 可调整区间值(0.01~0.5)
         
         self.buff = ctypes.create_unicode_buffer(32)
         #            代码，价格，数量，买入，代码，价格，数量，卖出，全撤， 撤买， 撤卖
@@ -55,7 +56,8 @@ class unity():
                            '填单': 3348, \
                            '查单': 3349} #'撤尾单': 2053, '撤相同': 30022}    # 华泰独有
                       
-        op.SendMessageW(main, WM_COMMAND, 163, 0)
+        op.SendMessageW(main, WM_COMMAND, 163, 0)    # 切换到撤单操作台
+        wait_a_second()
         self.cancel_panel = reduce(op.GetDlgItem, (59648, 59649), main)
         self.cancel_toolbar = {k: op.GetDlgItem(self.cancel_panel, v) for k, v in self.id_toolbar.items()}
 
@@ -82,6 +84,7 @@ class unity():
             sleep(0.1)    # 必须有
             op.PostMessageW(self.cancel_panel, WM_COMMAND, self.id_toolbar['查单'], self.cancel_toolbar['查单'])
             op.PostMessageW(self.cancel_panel, WM_COMMAND, self.id_toolbar['撤单'], self.cancel_toolbar['撤单'])
+            keystroke(self.main, F6)    # 必须返回双向委托操作台!
             
     def cancelAll(self):    # 全撤(Z)
         op.PostMessageW(self.two_way, WM_COMMAND, 30001, self.members[30001])
@@ -107,7 +110,7 @@ class unity():
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板，默认取持仓记录"
         
         keystroke(self.two_way, ord(key))    # 切换到持仓('W')、成交('E')、委托('R')
-        sleep(0.8)    # 等待券商的数据返回...
+        wait_a_second()    # 等待券商的数据返回...
         op.SendMessageW(self.custom, WM_COMMAND, 57634, self.path_custom[-1])    # background mode
         
         return pyperclip.paste()
@@ -140,9 +143,6 @@ if __name__ == '__main__':
 
     myRegister = {'券商登录号': '自定义名称',   \
                   '617145470': '东方不败', \
-                  '45645464682532': '张无忌',   \
-                  '74378458454548': '钢铁侠',   \
-                  '84482525525038': '李寻欢',   \
                   '20941552121212': '西门吹雪'}
     
     ret = finder()
@@ -159,10 +159,12 @@ if __name__ == '__main__':
         #print(json.dumps(profile, indent=4, ensure_ascii=False, sort_keys=True))
         
         raw = trader['东方不败'].get_data()    # 只能“大写字母”，小写字母THS会崩溃，无语！
+        print(raw)
         #print(to_dict(raw))
         
         raw = trader['东方不败'].get_data('R')
-        print(json.dumps(to_dict(raw), indent=4, ensure_ascii=False))
+        print(raw)
+        #print(json.dumps(to_dict(raw), indent=4, ensure_ascii=False))
         trader['东方不败'].cancel_order('')
     
     else: print("老板，没发现已登录的交易端！")
