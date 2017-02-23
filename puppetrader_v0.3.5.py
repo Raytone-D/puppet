@@ -1,7 +1,7 @@
 """puppetrader for ths client uniform"""
 __author__ =  '睿瞳深邃(https://github.com/Raytone-D)'
 __project__ = '扯线木偶(puppetrader for ths client unity)'
-__version__ = "0.3"
+__version__ = "0.3.5"
 '推荐使用：anaconda3 最新版，或者Python >= 3.6'
 # coding: utf-8
 
@@ -60,6 +60,7 @@ class unity():
         wait_a_second()
         self.cancel_panel = reduce(op.GetDlgItem, (59648, 59649), main)
         self.cancel_toolbar = {k: op.GetDlgItem(self.cancel_panel, v) for k, v in self.id_toolbar.items()}
+        keystroke(main, F6)    # 切换到双向委托
 
     def buy(self, symbol, price, qty):   # 买入(B)
         # buy = order('b')
@@ -79,6 +80,7 @@ class unity():
         op.PostMessageW(self.two_way, WM_COMMAND, 32790, self.members[32790])
         
     def cancel_order(self, symbol=''):    # 撤单
+        op.SendMessageW(main, WM_COMMAND, 163, 0)    # 切换到撤单操作台
         if symbol:
             op.SendMessageW(self.cancel_toolbar['填单'], WM_SETTEXT, 0, symbol)
             sleep(0.1)    # 必须有
