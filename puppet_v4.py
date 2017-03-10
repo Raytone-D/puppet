@@ -1,10 +1,9 @@
 """
-Puppet是一套以门户网站实时行情为前锋，以同花顺交易客户端为得分后卫，以通达信历史数据为控球后卫，以自建策略为中锋的，
-完整的闭环实盘交易系统框架。
+Puppet是一套以同花顺交易客户端为核心的完整的闭环实盘交易系统框架。
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D"
 __project__ = 'Puppet'
-__version__ = "0.4.2"
+__version__ = "0.4.3"
 
 # coding: utf-8
 
@@ -103,7 +102,7 @@ class Puppet():
         self.buff = ctypes.create_unicode_buffer(32)
         self.two_way = reduce(op.GetDlgItem, CONSOLE, self.main)
         self.members = {k: op.GetDlgItem(self.two_way, v) for k, v in TWO_WAY.items()}
-        print('我准备好了，开干吧！人生巅峰在前面！')
+        print('我准备好了，开干吧！人生巅峰在前面！') if self.main else print("没找到已登录的客户交易端，我先撤了！")
         # 获取登录账号
         self.account = reduce(op.GetDlgItem, ACCOUNT, self.main)
         op.SendMessageW(self.account, MSG['WM_GETTEXT'], 32, self.buff)
@@ -228,7 +227,7 @@ class Puppet():
 if __name__ == '__main__':
  
     trader = Puppet()
-    if trader:
+    if trader.account:
         print(trader.account)           # 帐号
         print(trader.new)               # 查当天新股名单
         trader.raffle(MKT['创业板'])    # 确定打新股，跳过创业板不打。
