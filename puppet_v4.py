@@ -79,6 +79,13 @@ VKCODE = {'F1': 112,
           'F5': 116,
           'F6': 117}
 
+MKT = {'CYB': '3',
+       'SH': '7',
+       'SZ': '0',
+       '创业板': '3',
+       '沪市': '7',
+       '深市': '0'}
+
 op = ctypes.windll.user32
 
 class Puppet():
@@ -156,12 +163,12 @@ class Puppet():
 
     @property
     def position(self):
-        print('持    仓: %s' % ('$'*68))
+        print('实时持仓: %s' % ('$'*68))
         return self.copy_data(TAB['持仓'])
 
     @property
     def deals(self):
-        print('成    交: %s' % ('$'*68))
+        print('当天成交: %s' % ('$'*68))
         return self.copy_data(TAB['成交'])
 
     @property
@@ -171,7 +178,7 @@ class Puppet():
 
     @property
     def new(self):
-        print('新    股: %s' % ('$'*68))
+        print('新股名单: %s' % ('$'*68))
         return self.raffle(way=False)
 
     def cancel_all(self):    # 全撤(Z)
@@ -195,6 +202,7 @@ class Puppet():
         #close_pop()    # 弹窗无需关闭，不影响交易。
         schedule = self.copy_data()
         if way:
+            pirnt("开始打新股%s" % ('>'*68))
             print(schedule)
             self.raffle_c = reduce(op.GetDlgItem, CONSOLE, self.main)
             self.raffle_ctrl = {k: op.GetDlgItem(self.raffle_c, v) for k, v in NEW.items()}
@@ -205,15 +213,15 @@ class Puppet():
                 op.SendMessageW(self.raffle_ctrl['可申购数量'], MSG['WM_GETTEXT'], 32, self.buff)
                 qty = self.buff.value
                 if symbol[0].startswith(skip):
-                    print({symbol: (qty, "创业板没开通！")})
+                    print({symbol: (qty, "跳过<%s>开头的新股！" % skip)})
                     continue
                 if qty == '0':
                     print({symbol: (qty, "数量为零")})
                     continue
-                print({symbol: qty})
                 op.SendMessageW(self.raffle_ctrl['申购数量'], MSG['WM_SETTEXT'], 0, qty)
                 self.wait_a_second()
                 op.PostMessageW(self.raffle_c, MSG['WM_COMMAND'], NEW['申购'], self.raffle_ctrl['申购'])
+                print({symbol: (qty, "已申购")})
         op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
         return schedule
 
@@ -221,12 +229,12 @@ if __name__ == '__main__':
  
     trader = Puppet()
     if trader:
-        print(trader.account)     # 帐号
-        print(trader.new)         # 查当天新股名单
-        #trader.raffle()          # 确定打新股
-        print(trader.balance)     # 可用余额
-        print(trader.position)    # 持仓
-        print(trader.deals)       # 成交
-        print(trader.cancelable)  # 可撤委托
+        print(trader.account)           # 帐号
+        print(trader.new)               # 查当天新股名单
+        trader.raffle(MKT['创业板'])    # 确定打新股，跳过创业板不打。
+        print(trader.balance)           # 可用余额
+        print(trader.position)          # 实时持仓
+        print(trader.deals)             # 当天成交
+        print(trader.cancelable)        # 可撤委托
                 
     else: print("老板，没发现已登录的交易客户端！")
