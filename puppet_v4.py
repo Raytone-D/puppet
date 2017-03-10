@@ -4,7 +4,7 @@ Puppet是一套以门户网站实时行情为前锋，以同花顺交易客户�
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D"
 __project__ = 'Puppet'
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 
 # coding: utf-8
 
@@ -190,7 +190,7 @@ class Puppet():
         #op.PostMessageW(self.two_way, WM_COMMAND, 30022, self.members[30022])
         pass
 
-    def raffle(self, way=True):    # 打新股。
+    def raffle(self, skip='', way=True):    # 打新股。
         op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['新股申购'], 0)
         #close_pop()    # 弹窗无需关闭，不影响交易。
         schedule = self.copy_data()
@@ -204,7 +204,7 @@ class Puppet():
                 self.wait_a_second(0.5)
                 op.SendMessageW(self.raffle_ctrl['可申购数量'], MSG['WM_GETTEXT'], 32, self.buff)
                 qty = self.buff.value
-                if symbol[0].startswith('3'):
+                if symbol[0].startswith(skip):
                     print({symbol: (qty, "创业板没开通！")})
                     continue
                 if qty == '0':
