@@ -102,7 +102,7 @@ class Puppet():
         op.SendMessageW(self.account, MSG['WM_GETTEXT'], 32, self.buff)
         self.account = self.buff.value
 
-    def switch_tab(self.hCtrl, keyCode, param=0):   # 单击
+    def switch_tab(self, hCtrl, keyCode, param=0):   # 单击
         op.PostMessageW(hCtrl, MSG['WM_KEYDOWN'], keyCode, param)
         self.wait_a_second(0.5)
         op.PostMessageW(hCtrl, MSG['WM_KEYUP'], keyCode, param)
@@ -110,7 +110,7 @@ class Puppet():
     def copy_data(self, key=0):    # background mode
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板，默认取当前的表格"
         if key:
-            switch_tab(self.two_way, key)    # 切换到持仓('W')、成交('E')、委托('R')
+            self.switch_tab(self.two_way, key)    # 切换到持仓('W')、成交('E')、委托('R')
         print("正在等待实时数据返回，请稍候...")
         self.wait_a_second(1)    # 等待数据返回的秒数自行调整，一般sec>=1
         op.SendMessageW(reduce(op.GetDlgItem, CONSOLE+GRID, self.main),
