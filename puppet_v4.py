@@ -235,5 +235,3 @@ if __name__ == '__main__':
         print(trader.position)          # 实时持仓
         print(trader.deals)             # 当天成交
         print(trader.cancelable)        # 可撤委托
-                
-    else: print("老板，没发现已登录的交易客户端！")
