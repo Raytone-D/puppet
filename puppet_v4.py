@@ -202,7 +202,7 @@ class Puppet():
         #close_pop()    # 弹窗无需关闭，不影响交易。
         schedule = self.copy_data()
         if way:
-            pirnt("开始打新股%s" % ('>'*68))
+            print("开始打新股%s" % ('>'*68))
             print(schedule)
             self.raffle_c = reduce(op.GetDlgItem, CONSOLE, self.main)
             self.raffle_ctrl = {k: op.GetDlgItem(self.raffle_c, v) for k, v in NEW.items()}
