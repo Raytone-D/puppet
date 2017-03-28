@@ -125,15 +125,15 @@ class Puppet():
         return pyperclip.paste()
 
     def buy(self, symbol, price, qty):   # 买入(B)
-        op.SendMessageW(self.members['买入代码'], MSG['WM_SETTEXT'], 0, symbol)
-        op.SendMessageW(self.members['买入价格'], MSG['WM_SETTEXT'], 0, price)
-        op.SendMessageW(self.members['买入数量'], MSG['WM_SETTEXT'], 0, qty)
+        op.SendMessageW(self.members['买入代码'], MSG['WM_SETTEXT'], 0, str(symbol))
+        op.SendMessageW(self.members['买入价格'], MSG['WM_SETTEXT'], 0, str(price))
+        op.SendMessageW(self.members['买入数量'], MSG['WM_SETTEXT'], 0, str(qty))
         op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['买入'], self.members['买入'])
 
     def sell(self, symbol, price, qty):    # 卖出(S)
-        op.SendMessageW(self.members['卖出代码'], MSG['WM_SETTEXT'], 0, symbol)
-        op.SendMessageW(self.members['卖出价格'], MSG['WM_SETTEXT'], 0, price)
-        op.SendMessageW(self.members['卖出数量'], MSG['WM_SETTEXT'], 0, qty)
+        op.SendMessageW(self.members['卖出代码'], MSG['WM_SETTEXT'], 0, str(symbol))
+        op.SendMessageW(self.members['卖出价格'], MSG['WM_SETTEXT'], 0, str(price))
+        op.SendMessageW(self.members['卖出数量'], MSG['WM_SETTEXT'], 0, str(qty))
         op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['卖出'], self.members['卖出'])
 
     def refresh(self):    # 刷新(F5)
