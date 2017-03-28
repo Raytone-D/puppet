@@ -3,7 +3,7 @@ Puppet是一套以同花顺交易客户端为核心的完整的闭环实盘交�
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D"
 __project__ = 'Puppet'
-__version__ = "0.4.3"
+__version__ = "0.4.4"
 
 # coding: utf-8
 
