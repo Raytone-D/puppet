@@ -3,7 +3,7 @@ Puppet是一套以同花顺交易客户端为核心的完整的闭环实盘交�
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D"
 __project__ = 'Puppet'
-__version__ = "0.4.4"
+__version__ = "0.4.5"
 
 # coding: utf-8
 
@@ -196,7 +196,7 @@ class Puppet():
         #op.PostMessageW(self.two_way, WM_COMMAND, 30022, self.members[30022])
         pass
 
-    def raffle(self, skip='', way=True):    # 打新股。
+    def raffle(self, skip=None, way=True):    # 打新股。
         op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['新股申购'], 0)
         #close_pop()    # 弹窗无需关闭，不影响交易。
         schedule = self.copy_data()
@@ -211,7 +211,7 @@ class Puppet():
                 self.wait_a_second(0.5)
                 op.SendMessageW(self.raffle_ctrl['可申购数量'], MSG['WM_GETTEXT'], 32, self.buff)
                 qty = self.buff.value
-                if symbol[0].startswith(skip):
+                if symbol[0] == skip:
                     print({symbol: (qty, "跳过<%s>开头的新股！" % skip)})
                     continue
                 if qty == '0':
