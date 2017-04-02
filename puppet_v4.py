@@ -3,7 +3,7 @@ Puppet是一套以同花顺交易客户端为核心的完整的闭环实盘交�
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D"
 __project__ = 'Puppet'
-__version__ = "0.4.5"
+__version__ = "0.4.6"
 
 # coding: utf-8
 
@@ -22,7 +22,8 @@ NODE = {'买入': 161,
         '卖出': 162,
         '撤单': 163,
         '双向委托': 512,
-        '新股申购': 554}
+        '新股申购': 554,
+        '中签查询': 1070}
 
 TWO_WAY = {'买入代码': 1032,
            '买入价格': 1033,
@@ -89,8 +90,9 @@ op = ctypes.windll.user32
 
 class Puppet():
     """
-    # 方法 # '委买': buy(), '委卖': sell(), '撤单': cancel(), '打新': raffle()
-    # 属性 # '可用余额': balance, '持仓': position, '成交': deals, '可撤委托': cancelable
+    # 方法 # '委买': buy(), '委卖': sell(), '撤单': cancel(), '打新': raffle(),
+    # 属性 # '帐号': account, '可用余额': balance, '持仓': position, '成交': deals, '可撤委托': cancelable, 
+    #      # '新股': new, '中签': bingo, 
     """
     def __init__(self, main=0):
 
@@ -179,6 +181,12 @@ class Puppet():
     def new(self):
         print('新股名单: %s' % ('$'*68))
         return self.raffle(way=False)
+
+    @property
+    def bingo(self):
+        print('新股中签: {0}'.format('$'*68))
+        api.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['中签查询'], 0)
+        return self.copy_data()
 
     def cancel_all(self):    # 全撤(Z)
         op.PostMessageW(self.two_way, MSG['WM_COMMAND'], 30001, self.members[30001])
