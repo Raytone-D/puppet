@@ -195,6 +195,7 @@ class Puppet:
 
     def _batch(self):
         """ 新股批量申购，自动切换无需指定，只有华泰、银河、招商、广发等券商可用。 """
+        self.tv.item(r'\新股申购\新股批量申购').click_input()
         print("新股批量申购：{0}".format('>'*8))
         print(self._get_data())
         time.sleep(0.5)
@@ -213,7 +214,7 @@ class Puppet:
         if '新股批量申购' in tag:
             self._batch()
         else:
-            self.tv.item(r'\新股申购\中签查询').click_input()
+            self.tv.item(r'\新股申购\新股申购').click_input()
             print("新股申购: {0}".format('>'*8))
             time.sleep(0.5)
             lv = self._client['SysListView32']
