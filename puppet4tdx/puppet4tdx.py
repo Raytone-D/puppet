@@ -89,7 +89,7 @@ class Puppet:
         tag = [x.text() for x in self.tv.roots()]    # 节点标签
         self.tag = [x for x in Tdx.TAG if x in tag]    # 筛选
         self.tv.item(r'\对买对卖').click_input()
-        self._trade = api.GetParent(self._client['SysListView32'])
+        self._trade = api.GetParent(self._client[Tdx.INIT])
         self.account = "暂不可用:("
 
     def _get_data(self, on=1):
