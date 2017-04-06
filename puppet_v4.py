@@ -215,7 +215,7 @@ class Puppet():
             print(schedule)
             self.raffle_c = reduce(op.GetDlgItem, CONSOLE, self.main)
             self.raffle_ctrl = {k: op.GetDlgItem(self.raffle_c, v) for k, v in NEW.items()}
-            new = [(x.split() for x in schedule.splitlines()]
+            new = [x.split() for x in schedule.splitlines()]
             index = (new[0].index(x) for x in RAFFLE if x in new[0])
             new = map(lambda x: [x[y] for y in index], new[1:]) 
             for symbol, price, qty in new:    
