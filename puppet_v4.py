@@ -3,7 +3,7 @@ Puppet是一套以同花顺交易客户端为核心的完整的闭环实盘交�
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D"
 __project__ = 'Puppet'
-__version__ = "0.4.6"
+__version__ = "0.4.7"
 
 # coding: utf-8
 
@@ -63,6 +63,8 @@ NEW = {'新股代码': 1032,
        '可申购数量': 1018,
        '申购数量': 1034,
        '申购': 1006}
+
+RAFFLE = ['证券代码', '申购价格', '申购上限']
 
 MSG = {'WM_SETTEXT': 12,
        'WM_GETTEXT': 13,
@@ -213,22 +215,23 @@ class Puppet():
             print(schedule)
             self.raffle_c = reduce(op.GetDlgItem, CONSOLE, self.main)
             self.raffle_ctrl = {k: op.GetDlgItem(self.raffle_c, v) for k, v in NEW.items()}
-            new = tuple(line.split()[1] for line in schedule.splitlines()[1:])
-            for symbol in new:
-                op.SendMessageW(self.raffle_ctrl['新股代码'], MSG['WM_SETTEXT'], 0, symbol)
-                self.wait_a_second(0.5)
-                op.SendMessageW(self.raffle_ctrl['可申购数量'], MSG['WM_GETTEXT'], 32, self.buff)
-                qty = self.buff.value
+            new = [(x.split() for x in schedule.splitlines()]
+            index = (new[0].index(x) for x in RAFFLE if x in new[0])
+            new = map(lambda x: [x[y] for y in index], new[1:]) 
+            for symbol, price, qty in new:    
                 if symbol[0] == skip:
                     print({symbol: (qty, "跳过<%s>开头的新股！" % skip)})
                     continue
                 if qty == '0':
                     print({symbol: (qty, "数量为零")})
                     continue
+                op.SendMessageW(self.raffle_ctrl['新股代码'], MSG['WM_SETTEXT'], 0, symbol)
+                self.wait_a_second(1)
                 op.SendMessageW(self.raffle_ctrl['申购数量'], MSG['WM_SETTEXT'], 0, qty)
                 self.wait_a_second()
                 op.PostMessageW(self.raffle_c, MSG['WM_COMMAND'], NEW['申购'], self.raffle_ctrl['申购'])
                 print({symbol: (qty, "已申购")})
+            print(self.cancelable)
         op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
         return schedule
 
