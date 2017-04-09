@@ -1,0 +1,40 @@
+"""
+# 扯线木偶操控API使用说明
+# api会保持稳定，只会“增减参数”来优化。
+# 实例方法必须有参数，否则跳出异常或输出属性的返回值。
+# 属性没参数，直接trader.xxx
+"""
+
+def buy(self, symbol, price=0, qty=0):
+    pass
+def sell(self, symbol, price=0, qty=0):
+    """
+    # 功能：实现了和交易端相同的买/卖委托。
+    # self: 类的实例方法。
+    # symbol: 代码，字符串类型，非0开头的可以直接用整数。
+    # price: 价格, 字符串或整数。
+    # qty: 数量，字符串类型或整数。
+
+    # 限价委托：trader.buy('002236', 16.55, 100)    # 最常用的下单方式。
+    # 扫五档委托：trader.buy('002236', 100)         # 注：v4未实现
+    # 全仓扫五档：trader.buy('002236')              # 注：v4未实现。
+    """
+    pass
+
+def cancel(self, way=CANCEL['撤买'], symbol=None):
+    """
+    # 功能：只实现了交易端的“查代码”撤单功能。可单独撤买或撤卖。
+    # way: 值可以是撤买按钮id或者撤卖按钮id，默认撤买，v4切换查单与撤买、撤卖。代码需要进一步简化。
+    # symbol: 股票代码
+    # trader.cancel('002236')
+    """
+    pass
+
+def raffle(self, skip=None, way=True):
+    """
+    # 功能：实现了交易端的“新股申购”功能。
+    # skip: 字符串，值可以是'7'(沪市)、'0'(深市主板)、'3'(创业板)其中之一。表示直接跳过申购。
+    # way: 布尔值，True表示申购，否则查新股名单。
+    # trader.raffle(skip='3')
+    """
+    pass
