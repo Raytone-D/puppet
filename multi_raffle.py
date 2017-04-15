@@ -1,4 +1,7 @@
-""" 多账户打新专用脚本 支持v4+版本 """
+"""
+# 多账户打新专用脚本 支持v4+版本
+# myRegister暂时没用上。暂时只支持同花顺交易端
+"""
 __author__ = '睿瞳深邃'
 __version__ = '0.1'
 
@@ -31,5 +34,3 @@ for x in traders:
     print(x.account)
     #print(x.new)
     x.raffle()
-
-# myRegister暂时没用上。暂时只支持同花顺交易端。
