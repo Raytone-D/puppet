@@ -3,7 +3,7 @@ Puppet是一套以同花顺交易客户端为核心的完整的闭环实盘交�
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D"
 __project__ = 'Puppet'
-__version__ = "0.4.7"
+__version__ = "0.4.8"
 
 # coding: utf-8
 
@@ -13,10 +13,9 @@ import time
 import pyperclip
 
 CONSOLE = 59648, 59649
-
 GRID = 1047, 200, 1047
-
 ACCOUNT = 59392, 0, 1711
+COMBO = 59392, 0, 2322
 
 NODE = {'买入': 161,
         '卖出': 162,
@@ -64,13 +63,16 @@ NEW = {'新股代码': 1032,
        '申购数量': 1034,
        '申购': 1006}
 
-RAFFLE = ['证券代码', '申购价格', '申购上限']
+RAFFLE = ['新股代码', '证券代码', '申购价格', '申购上限']
 
 MSG = {'WM_SETTEXT': 12,
        'WM_GETTEXT': 13,
        'WM_KEYDOWN': 256,
        'WM_KEYUP': 257,
-       'WM_COMMAND': 273}
+       'WM_COMMAND': 273,
+       'CB_GETCOUNT': 326,
+       'CB_SETCURSEL': 334,
+       'CBN_SELCHANGE': 1}
 
 CMD = {'COPY': 57634}
 
@@ -90,6 +92,10 @@ MKT = {'CYB': '3',
 
 op = ctypes.windll.user32
 
+def switch_combo(index, idCombo, hCombo):
+    op.SendMessageW(hCombo, CB_SETCURSEL, index, 0)
+    op.SendMessageW(op.GetParent(hCombo), WM_COMMAND, CBN_SELCHANGE<<16|idCombo, hCombo)
+        
 class Puppet():
     """
     # 方法 # '委买': buy(), '委卖': sell(), '撤单': cancel(), '打新': raffle(),
@@ -111,6 +117,8 @@ class Puppet():
         self.account = reduce(op.GetDlgItem, ACCOUNT, self.main)
         op.SendMessageW(self.account, MSG['WM_GETTEXT'], 32, self.buff)
         self.account = self.buff.value
+        self.combo = reduce(op.GetDlgItem, COMBO, self.main)
+        self.count = op.SendMessageW(self.combo, CB_GETCOUNT)
 
     def switch_tab(self, hCtrl, keyCode, param=0):   # 单击
         op.PostMessageW(hCtrl, MSG['WM_KEYDOWN'], keyCode, param)
