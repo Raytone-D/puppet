@@ -250,9 +250,9 @@ if __name__ == '__main__':
     trader = Puppet()
     if trader.account:
         print(trader.account)           # 帐号
-        print(trader.new)               # 查当天新股名单
-        trader.raffle(MKT['创业板'])    # 确定打新股，跳过创业板不打。
-        print(trader.balance)           # 可用余额
-        print(trader.position)          # 实时持仓
-        print(trader.deals)             # 当天成交
-        print(trader.cancelable)        # 可撤委托
+        #print(trader.new)               # 查当天新股名单
+        #trader.raffle(MKT['创业板'])    # 确定打新股，跳过创业板不打。
+        #print(trader.balance)           # 可用余额
+        #print(trader.position)          # 实时持仓
+        #print(trader.deals)             # 当天成交
+        #print(trader.cancelable)        # 可撤委托
