@@ -118,7 +118,7 @@ class Puppet():
         op.SendMessageW(self.account, MSG['WM_GETTEXT'], 32, self.buff)
         self.account = self.buff.value
         self.combo = reduce(op.GetDlgItem, COMBO, self.main)
-        self.count = op.SendMessageW(self.combo, CB_GETCOUNT)
+        self.count = op.SendMessageW(self.combo, MSG['CB_GETCOUNT'])
 
     def switch_tab(self, hCtrl, keyCode, param=0):   # 单击
         op.PostMessageW(hCtrl, MSG['WM_KEYDOWN'], keyCode, param)
