@@ -93,8 +93,8 @@ MKT = {'CYB': '3',
 op = ctypes.windll.user32
 
 def switch_combo(index, idCombo, hCombo):
-    op.SendMessageW(hCombo, CB_SETCURSEL, index, 0)
-    op.SendMessageW(op.GetParent(hCombo), WM_COMMAND, CBN_SELCHANGE<<16|idCombo, hCombo)
+    op.SendMessageW(hCombo, MSG['CB_SETCURSEL'], index, 0)
+    op.SendMessageW(op.GetParent(hCombo), MSG['WM_COMMAND'], MSG['CBN_SELCHANGE']<<16|idCombo, hCombo)
         
 class Puppet():
     """
@@ -195,7 +195,7 @@ class Puppet():
     @property
     def bingo(self):
         print('新股中签: {0}'.format('$'*68))
-        api.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['中签查询'], 0)
+        op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['中签查询'], 0)
         return self.copy_data()
 
     def cancel_all(self):    # 全撤(Z)
