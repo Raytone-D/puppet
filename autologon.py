@@ -26,9 +26,11 @@ def autologon(target=None):
         else: break
     if not api.IsWindowVisible(main):
         popup = api.GetLastActivePopup(main)
-        logon = api.GetDlgItem(popup, 1015)
-        if not api.IsWindowVisible(logon):
-            api.PostMessageW(popup, 273, 1014, api.GetDlgItem(popup, 1014))
+        logon = api.GetDlgItem(popup, 1015)    # 一键登录按钮
+        for i in range(10):
+            if not api.IsWindowVisible(logon):
+                api.PostMessageW(popup, 273, 1014, api.GetDlgItem(popup, 1014))
+                time.sleep(0.2)
         api.PostMessageW(popup, 273, 1015, logon)
 
 if __name__ == '__main__':
