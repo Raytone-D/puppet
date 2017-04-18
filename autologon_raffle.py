@@ -47,7 +47,5 @@ if __name__ == '__main__':
         if api.IsWindowVisible(x.combo):
             for i in range(x.count):
                 switch_combo(i, 2322, x.combo)
-                #print(x.account)
-                #print(x.new)
                 time.sleep(1)
                 x.raffle()
