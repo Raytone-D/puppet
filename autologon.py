@@ -3,7 +3,7 @@
 # 目前仅支持同花顺官方的独立交易端的“多帐号”登录模式。
 """
 __author__ = '睿瞳深邃'
-__version__ = '0.2'
+__version__ = '0.3'
 
 # coding: utf-8
 import os
