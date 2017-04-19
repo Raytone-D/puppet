@@ -15,15 +15,22 @@ api = ctypes.windll.user32
 
 def autologon(target=None):
     " 自动登录同花顺独立交易客户端 "
+    # 用快捷方式运行独立交易客户端
     path = os.path.split(os.path.realpath(__file__))[0]
     for lnk in os.listdir(path):
         if target in lnk:
             subprocess.Popen(os.path.join(path, lnk), shell=True)
+
+    # 搜索交易客户端
     for i in range(10):
         main = api.FindWindowW(0, '网上股票交易系统5.0')
         if not main:
             time.sleep(1)
-        else: break
+        else: 
+            time.sleep(1)
+            break
+
+    # 找出最新的弹窗然后点击登录
     if not api.IsWindowVisible(main):
         popup = api.GetLastActivePopup(main)
         logon = api.GetDlgItem(popup, 1015)    # 一键登录按钮
