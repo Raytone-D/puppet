@@ -21,12 +21,12 @@ def sell(self, symbol, price=0, qty=0):
     """
     pass
 
-def cancel(self, way=CANCEL['撤买'], symbol=None):
+def cancel(self, symbol=None, way='撤买'):
     """
-    # 功能：只实现了交易端的“查代码”撤单功能。可单独撤买或撤卖。
-    # way: 值可以是撤买按钮id或者撤卖按钮id，默认撤买，v4切换查单与撤买、撤卖。代码需要进一步简化。
+    # 功能：只实现了交易端的“查代码”撤单功能。可全撤或者单独撤买或撤卖
     # symbol: 股票代码
-    # trader.cancel('002236')
+    # way: 值可以是"撤买"、"撤卖"、"全撤"、"撤单"，其中一个。
+    # trader.cancel('002236'), trader.cancel('600006', '撤卖')
     """
     pass
 
