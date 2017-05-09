@@ -151,7 +151,7 @@ class Puppet():
     def refresh(self):    # 刷新(F5)
         op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['刷新'], self.members['刷新'])
 
-    def cancel(self, symbol=None, way=True):
+    def cancel(self, symbol=None, way='撤买'):
 
         op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['撤单'], 0)    # 切换到撤单操作台
         if way and str(symbol).isdecimal():
@@ -161,7 +161,7 @@ class Puppet():
             op.SendMessageW(self.cancel_ctrl['填单'], MSG['WM_SETTEXT'], 0, symbol)
             self.wait_a_second()
             op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], CANCEL['查单'], self.cancel_ctrl['查单'])
-            op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], CANCEL['撤单'], self.cancel_ctrl['撤单'])
+            op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], CANCEL[way], self.cancel_ctrl[way])
         schedule = self.copy_data()
         op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 必须返回交易操作台
         return schedule
