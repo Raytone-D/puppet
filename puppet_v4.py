@@ -53,7 +53,7 @@ CANCEL = {'全选': 1098,
           '全撤': 30001,
           '撤买': 30002,
           '撤卖': 30003,
-          '空白': 3348,
+          '填单': 3348,
           '查单': 3349}
 
 NEW = {'新股代码': 1032,
@@ -151,17 +151,17 @@ class Puppet():
     def refresh(self):    # 刷新(F5)
         op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['刷新'], self.members['刷新'])
 
-    def cancel(self, way=CANCEL['撤买'], symbol='000000'):
+    def cancel(self, symbol=None, way=True):
 
         op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['撤单'], 0)    # 切换到撤单操作台
-        if way != CANCEL['查单'] and symbol != '000000' and symbol.isdecimal():
-            print(self.copy_data())
+        if way and str(symbol).isdecimal():
+            #print(self.copy_data())
             self.cancel_c = reduce(op.GetDlgItem, CONSOLE, self.main)
-            self.cancel_ctrl = {v: op.GetDlgItem(self.cancel_c, v) for k, v in CANCEL.items()}
+            self.cancel_ctrl = {k: op.GetDlgItem(self.cancel_c, v) for k, v in CANCEL.items()}
             op.SendMessageW(self.cancel_ctrl['填单'], MSG['WM_SETTEXT'], 0, symbol)
             self.wait_a_second()
             op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], CANCEL['查单'], self.cancel_ctrl['查单'])
-            op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], way, self.cancel_ctrl[way])
+            op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], CANCEL['撤单'], self.cancel_ctrl['撤单'])
         schedule = self.copy_data()
         op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 必须返回交易操作台
         return schedule
@@ -185,7 +185,7 @@ class Puppet():
     @property
     def cancelable(self):
         print('可撤委托: %s' % ('$'*68))
-        return self.cancel(way=CANCEL['查单'])
+        return self.cancel(way=False)
 
     @property
     def new(self):
