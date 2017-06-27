@@ -178,6 +178,12 @@ class Puppet():
         return self.copy_data(TAB['持仓'])
 
     @property
+    def market_value(self):
+        form = (x.split() for x in self.position.splitlines())
+        index = next(form).index('市值')
+        return sum((float(row[index]) for row in form))
+
+    @property
     def deals(self):
         print('当天成交: %s' % ('$'*68))
         return self.copy_data(TAB['成交'])
@@ -256,3 +262,5 @@ if __name__ == '__main__':
         #print(trader.position)          # 实时持仓
         #print(trader.deals)             # 当天成交
         #print(trader.cancelable)        # 可撤委托
+        print(trader.market_value)
+        
