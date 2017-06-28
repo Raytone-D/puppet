@@ -3,7 +3,7 @@ Puppet是一套以同花顺交易客户端为核心的完整的闭环实盘交�
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D"
 __project__ = 'Puppet'
-__version__ = "0.4.9"
+__version__ = "0.4.11"
 
 # coding: utf-8
 
@@ -70,6 +70,7 @@ MSG = {'WM_SETTEXT': 12,
        'WM_KEYDOWN': 256,
        'WM_KEYUP': 257,
        'WM_COMMAND': 273,
+       'BM_CLICK': 245,
        'CB_GETCOUNT': 326,
        'CB_SETCURSEL': 334,
        'CBN_SELCHANGE': 1}
@@ -140,13 +141,15 @@ class Puppet():
         op.SendMessageW(self.members['买入代码'], MSG['WM_SETTEXT'], 0, str(symbol))
         op.SendMessageW(self.members['买入价格'], MSG['WM_SETTEXT'], 0, str(price))
         op.SendMessageW(self.members['买入数量'], MSG['WM_SETTEXT'], 0, str(qty))
-        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['买入'], self.members['买入'])
+        op.SendMessageW(self.members['买入'], MSG['BM_CLICK'], 0, 0)
+        #op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['买入'], self.members['买入'])
 
     def sell(self, symbol, price, qty):    # 卖出(S)
         op.SendMessageW(self.members['卖出代码'], MSG['WM_SETTEXT'], 0, str(symbol))
         op.SendMessageW(self.members['卖出价格'], MSG['WM_SETTEXT'], 0, str(price))
         op.SendMessageW(self.members['卖出数量'], MSG['WM_SETTEXT'], 0, str(qty))
-        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['卖出'], self.members['卖出'])
+        op.SendMessageW(self.members['卖出'], MSG['BM_CLICK'], 0, 0)
+        #op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['卖出'], self.members['卖出'])
 
     def refresh(self):    # 刷新(F5)
         op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['刷新'], self.members['刷新'])
