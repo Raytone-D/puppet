@@ -28,8 +28,8 @@ NODE = {'FRAME': (59648, 59649),
         'FORM': (59648, 59649, 1047, 200, 1047),
         'ACCOUNT': (59392, 0, 1711),
         'COMBO': (59392, 0, 2322),
-        'BUY': (161, (1032, 1033, 1034,) 1006),
-        'SELL':(162, (1032, 1033, 1034,) 1006),
+        'BUY': (161, (1032, 1033, 1034), 1006),
+        'SELL':(162, (1032, 1033, 1034), 1006),
         '撤单': 163,
         '双向委托': 512,
         '新股申购': 554,
@@ -108,7 +108,7 @@ class Puppet:
         print('我正在热身，稍等一下...')
         self.main = main or op.FindWindowW(0, title)
         self.switch = lambda node: op.SendMessageW(self.main, MSG['WM_COMMAND'], node, 0)
-        self_order = []
+        self._order = []
         for i in (NODE['BUY'],NODE['SELL']):
                 node, parts, button = i
                 self.switch(node)
