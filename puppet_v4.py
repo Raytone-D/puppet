@@ -110,11 +110,11 @@ class Puppet:
         self.switch = lambda node: op.SendMessageW(self.main, MSG['WM_COMMAND'], node, 0)
         self._order = []
         for i in (NODE['BUY'],NODE['SELL']):
-                node, parts, button = i
-                self.switch(node)
-                time.sleep(0.3)
-                x = reduce(op.GetDlgItem, NODE['FRAME'], self.main)
-                self._order.append((tuple(api.GetDlgItem(x, v) for v in parts), button, x))
+            node, parts, button = i
+            self.switch(node)
+            time.sleep(0.3)
+            x = reduce(op.GetDlgItem, NODE['FRAME'], self.main)
+            self._order.append((tuple(op.GetDlgItem(x, v) for v in parts), button, x))
         
         op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
         self.wait_a_second = lambda sec=0.2: time.sleep(sec)
