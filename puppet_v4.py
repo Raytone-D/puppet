@@ -145,21 +145,21 @@ class Puppet:
         for i in range(10):
             time.sleep(0.3)
             op.SendMessageW(reduce(op.GetDlgItem, NODE['FORM'], self.main),
-                            MSG['WM_COMMAND'], MSG['COPY_DATA'], GRID[-1])
+                            MSG['WM_COMMAND'], MSG['COPY_DATA'], NODE['FORM'][-1])
             if len(pyperclip.paste().splitlines()) > 1:
                 break
         return pyperclip.paste()
 
     def buy(self, symbol, price, qty):
-        self.switch(NODE['BUY'])
+        self.switch(NODE['BUY'][0])
         tuple(map(lambda hCtrl, arg: op.SendMessageW(
-            hCtrl, MSG['WM_SETTEXT'], 0, str(arg), self._order[0][0], (symbol, price, qty)))
+            hCtrl, MSG['WM_SETTEXT'], 0, str(arg)), self._order[0][0], (symbol, price, qty)))
         op.PostMessageW(self._order[0][-1], MSG['WM_COMMAND'], self._order[0][1], 0)
         
     def sell(self, symbol, price, qty):
-        self.switch(NODE['SELL'])
+        self.switch(NODE['SELL'][0])
         tuple(map(lambda hCtrl, arg: op.SendMessageW(
-            hCtrl, MSG['WM_SETTEXT'], 0, str(arg), self._order[1][0], (symbol, price, qty)))
+            hCtrl, MSG['WM_SETTEXT'], 0, str(arg)), self._order[1][0], (symbol, price, qty)))
         op.PostMessageW(self._order[1][-1], MSG['WM_COMMAND'], self._order[1][1], 0)
     
     def buy2(self, symbol, price, qty):   # 买入(B)
@@ -284,6 +284,7 @@ class Puppet:
 if __name__ == '__main__':
  
     trader = Puppet()
+    #trader = Puppet(title='广发证券核新网上交易系统7.60')
     if trader.account:
         print(trader.account)           # 帐号
         #print(trader.new)               # 查当天新股名单
