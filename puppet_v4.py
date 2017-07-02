@@ -103,7 +103,7 @@ class Puppet:
     # 属性 # '帐号': account, '可用余额': balance, '持仓': position, '成交': deals, '可撤委托': cancelable, 
     #      # '新股': new, '中签': bingo, 
     """
-    def __init__(self, main=None, title="网上股票交易系统5.0"):
+    def __init__(self, main=None, title='网上股票交易系统5.0'):
 
         print('我正在热身，稍等一下...')
         self.main = main or op.FindWindowW(0, title)
@@ -145,24 +145,25 @@ class Puppet:
         for i in range(10):
             time.sleep(0.3)
             op.SendMessageW(reduce(op.GetDlgItem, NODE['FORM'], self.main),
-                                   MSG['WM_COMMAND'], NODE['COPY_DATA'], GRID[-1])
+                            MSG['WM_COMMAND'], MSG['COPY_DATA'], GRID[-1])
             if len(pyperclip.paste().splitlines()) > 1:
                 break
         return pyperclip.paste()
 
     def buy(self, symbol, price, qty):
         self.switch(NODE['BUY'])
-        tuple(map(op.SendMessageW, self._order[0][0], (symbol, price, qty)))
+        tuple(map(lambda hCtrl, arg: op.SendMessageW(
+            hCtrl, MSG['WM_SETTEXT'], 0, str(arg), self._order[0][0], (symbol, price, qty)))
         op.PostMessageW(self._order[0][-1], MSG['WM_COMMAND'], self._order[0][1], 0)
-        self.switch(NODE['双向委托'])
         
     def sell(self, symbol, price, qty):
         self.switch(NODE['SELL'])
-        tuple(map(op.SendMessageW, self._order[1][0], (symbol, price, qty)))
+        tuple(map(lambda hCtrl, arg: op.SendMessageW(
+            hCtrl, MSG['WM_SETTEXT'], 0, str(arg), self._order[1][0], (symbol, price, qty)))
         op.PostMessageW(self._order[1][-1], MSG['WM_COMMAND'], self._order[1][1], 0)
-        self.switch(NODE['双向委托'])
     
     def buy2(self, symbol, price, qty):   # 买入(B)
+        self.switch(NODE['双向委托'])
         op.SendMessageW(self.members['买入代码'], MSG['WM_SETTEXT'], 0, str(symbol))
         op.SendMessageW(self.members['买入价格'], MSG['WM_SETTEXT'], 0, str(price))
         op.SendMessageW(self.members['买入数量'], MSG['WM_SETTEXT'], 0, str(qty))
@@ -170,6 +171,7 @@ class Puppet:
         op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['买入'], self.members['买入'])
     
     def sell2(self, symbol, price, qty):    # 卖出(S)
+        self.switch(NODE['双向委托'])
         op.SendMessageW(self.members['卖出代码'], MSG['WM_SETTEXT'], 0, str(symbol))
         op.SendMessageW(self.members['卖出价格'], MSG['WM_SETTEXT'], 0, str(price))
         op.SendMessageW(self.members['卖出数量'], MSG['WM_SETTEXT'], 0, str(qty))
