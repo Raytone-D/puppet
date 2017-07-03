@@ -153,21 +153,21 @@ class Puppet:
         return pyperclip.paste()
 
     def buy(self, symbol, price, qty, sec=0.3):
-        self.switch(NODE['BUY'][0])
+        #self.switch(NODE['BUY'][0])
         tuple(map(lambda hCtrl, arg: op.SendMessageW(
             hCtrl, MSG['WM_SETTEXT'], 0, str(arg)), self._order[0][0], (symbol, price, qty)))
         time.sleep(sec)
         op.PostMessageW(self._order[0][-1], MSG['WM_COMMAND'], self._order[0][1], 0)
         
     def sell(self, symbol, price, qty, sec=0.3):
-        self.switch(NODE['SELL'][0])
+        #self.switch(NODE['SELL'][0])
         tuple(map(lambda hCtrl, arg: op.SendMessageW(
             hCtrl, MSG['WM_SETTEXT'], 0, str(arg)), self._order[1][0], (symbol, price, qty)))
         time.sleep(sec)
         op.PostMessageW(self._order[1][-1], MSG['WM_COMMAND'], self._order[1][1], 0)
     
     def buy2(self, symbol, price, qty, sec=0.3):   # 买入(B)
-        self.switch(NODE['双向委托'])
+        #self.switch(NODE['双向委托'])
         op.SendMessageW(self.members['买入代码'], MSG['WM_SETTEXT'], 0, str(symbol))
         op.SendMessageW(self.members['买入价格'], MSG['WM_SETTEXT'], 0, str(price))
         op.SendMessageW(self.members['买入数量'], MSG['WM_SETTEXT'], 0, str(qty))
@@ -176,7 +176,7 @@ class Puppet:
         op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['买入'], self.members['买入'])
     
     def sell2(self, symbol, price, qty, sec=0.3):    # 卖出(S)
-        self.switch(NODE['双向委托'])
+        #self.switch(NODE['双向委托'])
         op.SendMessageW(self.members['卖出代码'], MSG['WM_SETTEXT'], 0, str(symbol))
         op.SendMessageW(self.members['卖出价格'], MSG['WM_SETTEXT'], 0, str(price))
         op.SendMessageW(self.members['卖出数量'], MSG['WM_SETTEXT'], 0, str(qty))
