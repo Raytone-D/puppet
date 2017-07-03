@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.12"
+__version__ = "0.4.13"
 __license__ = 'MIT'
 
 # coding: utf-8
