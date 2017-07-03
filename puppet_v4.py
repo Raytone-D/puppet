@@ -239,19 +239,19 @@ class Puppet:
         return self.copy_data()
 
     def cancel_all(self):    # 全撤(Z)
-        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], 30001, self.members[30001])
+        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], 30001, self.members['全撤'])
 
     def cancel_buy(self):    # 撤买(X)
-        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], 30002, self.members[30002])
+        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], 30002, self.members['撤买'])
 
     def cancel_sell(self):    # 撤卖(C)
-        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], 30003, self.members[30003])
+        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], 30003, self.members['撤卖])
 
     def cancel_last(self):    # 撤最后一笔，仅限华泰定制版有效
-        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], 2053, self.members[2053])
+        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], 2053, 0)
 
     def cancel_same(self):    # 撤相同代码，仅限华泰定制版
-        #op.PostMessageW(self.two_way, WM_COMMAND, 30022, self.members[30022])
+        #op.PostMessageW(self.two_way, WM_COMMAND, 30022, 0)
         pass
 
     def raffle(self, skip=None, way=True):    # 打新股。
