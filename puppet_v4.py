@@ -221,7 +221,10 @@ class Puppet:
     @property
     def position(self):
         print('实时持仓: %s' % ('$'*8))
-        return self.copy_data(self._position, TAB['持仓'])
+        form = [x.split() for x in self.copy_data(self._position, TAB['持仓'])]
+        if len(form) == 1:
+            form.append([None])
+        return dict(zip(*form))
 
     @property
     def market_value(self):
