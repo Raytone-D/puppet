@@ -271,7 +271,7 @@ class Puppet:
         op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], 30002, self.members['撤买'])
 
     def cancel_sell(self):    # 撤卖(C)
-        op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], 30003, self.members['撤卖])
+        op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], 30003, self.members['撤卖'])
 
     def cancel_last(self):    # 撤最后一笔，仅限华泰定制版有效
         op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], 2053, 0)
