@@ -110,6 +110,8 @@ class Puppet:
         self.main = main or op.FindWindowW(0, title)
         self.switch = lambda node: op.SendMessageW(self.main, MSG['WM_COMMAND'], node, 0)
         self._order = []
+        self._position = None
+        self._cancelable = None
         self._entrustment = None
         for i in (NODE['BUY'],NODE['SELL']):
             node, parts, button = i
@@ -120,6 +122,7 @@ class Puppet:
         
         op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['撤单'], 0)
         self.cancel_c = reduce(op.GetDlgItem, NODE['FRAME'], self.main)
+        self._cancelable = reduce(op.GetDlgItem, NODE['FORM'], self.main)
         op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
         self.wait_a_second = lambda sec=0.2: time.sleep(sec)
         self.wait_a_second()    # 可调整区间值(0.01~0.5)
@@ -143,6 +146,9 @@ class Puppet:
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板，默认取当前的表格"
         if key:
             self.switch_tab(self.two_way, key)    # 切换到持仓('W')、成交('E')、委托('R')
+            if not self._position:
+            op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['双向委托'], 0)
+            self._position = reduce(op.GetDlgItem, NODE['FORM'], self.main)
         start = time.time()
         print("正在等待实时数据返回，请稍候...")
         pyperclip.copy('')
@@ -153,7 +159,7 @@ class Puppet:
             x = pyperclip.paste().splitlines()
             if len(x) > 1:
                 break
-        print('take time:{}'.format(time.time() - start))
+        print('take time: {}'.format(time.time() - start))
         return x
 
     def buy(self, symbol, price, qty, sec=0.3):
@@ -215,18 +221,18 @@ class Puppet:
     @property
     def position(self):
         print('实时持仓: %s' % ('$'*68))
-        return self.copy_data(TAB['持仓'])
+        return self.copy_data(self._position, TAB['持仓'])
 
     @property
     def market_value(self):
-        form = (x.split() for x in self.position.splitlines())
+        form = (x.split() for x in self.position)
         index = next(form).index('市值')
         return sum((float(row[index]) for row in form))
 
     @property
     def deals(self):
         print('当天成交: %s' % ('$'*68))
-        return self.copy_data(TAB['成交'])
+        return self.copy_data(self._position, TAB['成交'])
 
     
     @property
@@ -234,13 +240,15 @@ class Puppet:
         if not self._entrustment:
             self.switch(NODE['ENTRUSTMENT'])
             self._entrustment = reduce(op.GetDlgItem, NODE['FORM'], self.main)
-        form = (x.split() for x in self.copy_data(self._entrustment))
+        form = [x.split() for x in self.copy_data(self._entrustment)]
+        if len(form) == 1:
+            form.append([None, None])
         return dict(zip(*form))
 
     @property
     def cancelable(self):
         print('可撤委托: %s' % ('$'*68))
-        return self.cancel(way=False)
+        return self.cancel(self._cancelable)
 
     @property
     def new(self):
@@ -271,8 +279,9 @@ class Puppet:
 
     def raffle(self, skip=None, way=True):    # 打新股。
         op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['新股申购'], 0)
+        self._raffle = reduce(op.GetDlgItem, NODE['FORM'], self.main)
         #close_pop()    # 弹窗无需关闭，不影响交易。
-        schedule = self.copy_data()
+        schedule = self.copy_data(self._raffle)
         if way:
             print("开始打新股%s" % ('>'*68))
             print(schedule)
