@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.13"
+__version__ = "0.4.14"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -30,6 +30,7 @@ NODE = {'FRAME': (59648, 59649),
         'COMBO': (59392, 0, 2322),
         'BUY': (161, (1032, 1033, 1034), 1006),
         'SELL':(162, (1032, 1033, 1034), 1006),
+        'ENTRUSTMENT': 168,
         '撤单': 163,
         '双向委托': 512,
         '新股申购': 554,
@@ -109,6 +110,7 @@ class Puppet:
         self.main = main or op.FindWindowW(0, title)
         self.switch = lambda node: op.SendMessageW(self.main, MSG['WM_COMMAND'], node, 0)
         self._order = []
+        self._entrustment = None
         for i in (NODE['BUY'],NODE['SELL']):
             node, parts, button = i
             self.switch(node)
@@ -137,20 +139,22 @@ class Puppet:
         self.wait_a_second(0.5)
         op.PostMessageW(hCtrl, MSG['WM_KEYUP'], keyCode, param)
 
-    def copy_data(self, key=0):    # background mode
+    def copy_data(self, hCtrl, key=0):    # background mode
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板，默认取当前的表格"
         if key:
             self.switch_tab(self.two_way, key)    # 切换到持仓('W')、成交('E')、委托('R')
+        start = time.time()
         print("正在等待实时数据返回，请稍候...")
         pyperclip.copy('')
         # 查到只有列表头的空白数据等3秒...orz
-        for i in range(10):
-            time.sleep(0.3)
-            op.SendMessageW(reduce(op.GetDlgItem, NODE['FORM'], self.main),
-                            MSG['WM_COMMAND'], MSG['COPY_DATA'], NODE['FORM'][-1])
-            if len(pyperclip.paste().splitlines()) > 1:
+        for i in range(20):
+            time.sleep(0.2)
+            op.SendMessageW(hCtrl, MSG['WM_COMMAND'], MSG['COPY_DATA'], NODE['FORM'][-1])
+            x = pyperclip.paste().splitlines()
+            if len(x) > 1:
                 break
-        return pyperclip.paste()
+        print('take time:{}'.format(time.time() - start))
+        return x
 
     def buy(self, symbol, price, qty, sec=0.3):
         #self.switch(NODE['BUY'][0])
@@ -223,6 +227,15 @@ class Puppet:
     def deals(self):
         print('当天成交: %s' % ('$'*68))
         return self.copy_data(TAB['成交'])
+
+    
+    @property
+    def entrustment(self):
+        if not self._entrustment:
+            self.switch(NODE['ENTRUSTMENT'])
+            self._entrustment = reduce(op.GetDlgItem, NODE['FORM'], self.main)
+        form = (x.split() for x in self.copy_data(self._entrustment))
+        return dict(zip(*form))
 
     @property
     def cancelable(self):
@@ -300,4 +313,4 @@ if __name__ == '__main__':
         #print(trader.deals)             # 当天成交
         #print(trader.cancelable)        # 可撤委托
         print(trader.market_value)
-        
+        print(trader.entrustment)        # 当日委托（可撤委托，已成委托，已撤销委托）
