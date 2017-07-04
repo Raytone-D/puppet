@@ -147,8 +147,8 @@ class Puppet:
         if key:
             self.switch_tab(self.two_way, key)    # 切换到持仓('W')、成交('E')、委托('R')
             if not self._position:
-            op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['双向委托'], 0)
-            self._position = reduce(op.GetDlgItem, NODE['FORM'], self.main)
+                op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['双向委托'], 0)
+                self._position = reduce(op.GetDlgItem, NODE['FORM'], self.main)
         start = time.time()
         print("正在等待实时数据返回，请稍候...")
         pyperclip.copy('')
