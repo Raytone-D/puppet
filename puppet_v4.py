@@ -107,8 +107,8 @@ class Puppet:
     def __init__(self, main=None, title='网上股票交易系统5.0'):
 
         print('我正在热身，稍等一下...')
-        self.main = main or op.FindWindowW(0, title)
-        self.switch = lambda node: op.SendMessageW(self.main, MSG['WM_COMMAND'], node, 0)
+        self._main = main or op.FindWindowW(0, title)
+        self.switch = lambda node: op.SendMessageW(self._main, MSG['WM_COMMAND'], node, 0)
         self._order = []
         self._position = None
         self._cancelable = None
@@ -117,24 +117,24 @@ class Puppet:
             node, parts, button = i
             self.switch(node)
             time.sleep(0.3)
-            x = reduce(op.GetDlgItem, NODE['FRAME'], self.main)
+            x = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
             self._order.append((tuple(op.GetDlgItem(x, v) for v in parts), button, x))
         
-        op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['撤单'], 0)
-        self.cancel_c = reduce(op.GetDlgItem, NODE['FRAME'], self.main)
-        self._cancelable = reduce(op.GetDlgItem, NODE['FORM'], self.main)
-        op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
+        op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['撤单'], 0)
+        self.cancel_c = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
+        self._cancelable = reduce(op.GetDlgItem, NODE['FORM'], self._main)
+        op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
         self.wait_a_second = lambda sec=0.2: time.sleep(sec)
         self.wait_a_second()    # 可调整区间值(0.01~0.5)
         self.buff = ctypes.create_unicode_buffer(32)
-        self.two_way = reduce(op.GetDlgItem, NODE['FRAME'], self.main)
+        self.two_way = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
         self.members = {k: op.GetDlgItem(self.two_way, v) for k, v in TWO_WAY.items()}
-        print('我准备好了，开干吧！人生巅峰在前面！') if self.main else print("没找到已登录的客户交易端，我先撤了！")
+        print('我准备好了，开干吧！人生巅峰在前面！') if self._main else print("没找到已登录的客户交易端，我先撤了！")
         # 获取登录账号
-        self.account = reduce(op.GetDlgItem, NODE['ACCOUNT'], self.main)
+        self.account = reduce(op.GetDlgItem, NODE['ACCOUNT'], self._main)
         op.SendMessageW(self.account, MSG['WM_GETTEXT'], 32, self.buff)
         self.account = self.buff.value
-        self.combo = reduce(op.GetDlgItem, NODE['COMBO'], self.main)
+        self.combo = reduce(op.GetDlgItem, NODE['COMBO'], self._main)
         self.count = op.SendMessageW(self.combo, MSG['CB_GETCOUNT'])
 
     def switch_tab(self, hCtrl, keyCode, param=0):   # 单击
@@ -147,8 +147,8 @@ class Puppet:
         if key:
             self.switch_tab(self.two_way, key)    # 切换到持仓('W')、成交('E')、委托('R')
             if not self._position:
-                op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['双向委托'], 0)
-                self._position = reduce(op.GetDlgItem, NODE['FORM'], self.main)
+                op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['双向委托'], 0)
+                self._position = reduce(op.GetDlgItem, NODE['FORM'], self._main)
         start = time.time()
         print("正在等待实时数据返回，请稍候...")
         pyperclip.copy('')
@@ -199,17 +199,17 @@ class Puppet:
 
     def cancel(self, symbol=None, way='撤买'):
 
-        op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['撤单'], 0)    # 切换到撤单操作台
+        op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['撤单'], 0)    # 切换到撤单操作台
         if way and str(symbol).isdecimal():
             #print(self.copy_data())
-            self.cancel_c = reduce(op.GetDlgItem, NODE['FRAME'], self.main)
+            self.cancel_c = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
             self.cancel_ctrl = {k: op.GetDlgItem(self.cancel_c, v) for k, v in CANCEL.items()}
             op.SendMessageW(self.cancel_ctrl['填单'], MSG['WM_SETTEXT'], 0, symbol)
             self.wait_a_second()
             op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], CANCEL['查单'], self.cancel_ctrl['查单'])
             op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], CANCEL[way], self.cancel_ctrl[way])
         schedule = self.copy_data()
-        op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 必须返回交易操作台
+        op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 必须返回交易操作台
         return schedule
 
     @property
@@ -242,7 +242,7 @@ class Puppet:
     def entrustment(self):
         if not self._entrustment:
             self.switch(NODE['ENTRUSTMENT'])
-            self._entrustment = reduce(op.GetDlgItem, NODE['FORM'], self.main)
+            self._entrustment = reduce(op.GetDlgItem, NODE['FORM'], self._main)
         form = [x.split() for x in self.copy_data(self._entrustment)]
         if len(form) == 1:
             form.append([None])
@@ -264,7 +264,7 @@ class Puppet:
     @property
     def bingo(self):
         print('新股中签: {0}'.format('$'*8))
-        op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['中签查询'], 0)
+        op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['中签查询'], 0)
         return self.copy_data()
 
     def cancel_all(self):    # 全撤(Z)
@@ -284,14 +284,14 @@ class Puppet:
         pass
 
     def raffle(self, skip=None, way=True):    # 打新股。
-        op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['新股申购'], 0)
-        self._raffle = reduce(op.GetDlgItem, NODE['FORM'], self.main)
+        op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['新股申购'], 0)
+        self._raffle = reduce(op.GetDlgItem, NODE['FORM'], self._main)
         #close_pop()    # 弹窗无需关闭，不影响交易。
         schedule = self.copy_data(self._raffle)
         if way:
             print("开始打新股%s" % ('>'*68))
             print(schedule)
-            self.raffle_c = reduce(op.GetDlgItem, NODE['FRAME'], self.main)
+            self.raffle_c = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
             self.raffle_ctrl = {k: op.GetDlgItem(self.raffle_c, v) for k, v in NEW.items()}
             new = [x.split() for x in schedule.splitlines()]
             index = [new[0].index(x) for x in RAFFLE if x in new[0]]    # 索引映射：代码0, 价格1, 数量2
@@ -312,7 +312,7 @@ class Puppet:
                 op.PostMessageW(self.raffle_c, MSG['WM_COMMAND'], NEW['申购'], self.raffle_ctrl['申购'])
                 print({symbol: (qty, "已申购")})
         print(self.cancelable)
-        op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
+        op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
         return schedule
 
 if __name__ == '__main__':
