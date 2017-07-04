@@ -214,13 +214,13 @@ class Puppet:
 
     @property
     def balance(self):
-        print('可用余额: %s' % ('$'*68))
+        print('可用余额: %s' % ('$'*8))
         op.SendMessageW(self.members['可用余额'], MSG['WM_GETTEXT'], 32, self.buff)
         return self.buff.value
 
     @property
     def position(self):
-        print('实时持仓: %s' % ('$'*68))
+        print('实时持仓: %s' % ('$'*8))
         return self.copy_data(self._position, TAB['持仓'])
 
     @property
@@ -231,7 +231,7 @@ class Puppet:
 
     @property
     def deals(self):
-        print('当天成交: %s' % ('$'*68))
+        print('当天成交: %s' % ('$'*8))
         return self.copy_data(self._position, TAB['成交'])
 
     
@@ -242,22 +242,25 @@ class Puppet:
             self._entrustment = reduce(op.GetDlgItem, NODE['FORM'], self.main)
         form = [x.split() for x in self.copy_data(self._entrustment)]
         if len(form) == 1:
-            form.append([None, None])
+            form.append([None])
         return dict(zip(*form))
 
     @property
     def cancelable(self):
-        print('可撤委托: %s' % ('$'*68))
-        return self.cancel(self._cancelable)
+        print('可撤委托: %s' % ('$'*8))
+        form = [x.split() for x in self.copy_data(self._cancelable)]
+        if len(form) == 1:
+            form.append([None])
+        return dict(zip(*form))
 
     @property
     def new(self):
-        print('新股名单: %s' % ('$'*68))
+        print('新股名单: %s' % ('$'*8))
         return self.raffle(way=False)
 
     @property
     def bingo(self):
-        print('新股中签: {0}'.format('$'*68))
+        print('新股中签: {0}'.format('$'*8))
         op.SendMessageW(self.main, MSG['WM_COMMAND'], NODE['中签查询'], 0)
         return self.copy_data()
 
