@@ -225,6 +225,7 @@ class Puppet:
 
     @property
     def position(self):
+        self.switch(NODE['双向委托'])
         return self.copy_data(self._position, TAB['持仓'])
 
     @property
