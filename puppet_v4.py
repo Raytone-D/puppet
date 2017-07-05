@@ -124,11 +124,12 @@ class Puppet:
         self.cancel_c = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
         self._cancelable = reduce(op.GetDlgItem, NODE['FORM'], self._main)
         op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
-        self.wait_a_second = lambda sec=0.2: time.sleep(sec)
+        self.wait_a_second = lambda sec=0.3: time.sleep(sec)
         self.wait_a_second()    # 可调整区间值(0.01~0.5)
         self.buff = ctypes.create_unicode_buffer(32)
         self.two_way = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
         self.members = {k: op.GetDlgItem(self.two_way, v) for k, v in TWO_WAY.items()}
+        self._position = reduce(op.GetDlgItem, NODE['FORM'], self._main)
         print('我准备好了，开干吧！人生巅峰在前面！') if self._main else print("没找到已登录的客户交易端，我先撤了！")
         # 获取登录账号
         self.account = reduce(op.GetDlgItem, NODE['ACCOUNT'], self._main)
@@ -139,28 +140,28 @@ class Puppet:
 
     def switch_tab(self, hCtrl, keyCode, param=0):   # 单击
         op.PostMessageW(hCtrl, MSG['WM_KEYDOWN'], keyCode, param)
-        self.wait_a_second(0.5)
+        self.wait_a_second(0.1)
         op.PostMessageW(hCtrl, MSG['WM_KEYUP'], keyCode, param)
 
     def copy_data(self, hCtrl, key=0):    # background mode
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板，默认取当前的表格"
         if key:
             self.switch_tab(self.two_way, key)    # 切换到持仓('W')、成交('E')、委托('R')
-            if not self._position:
-                op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['双向委托'], 0)
-                self._position = reduce(op.GetDlgItem, NODE['FORM'], self._main)
+
         start = time.time()
         print("正在等待实时数据返回，请稍候...")
-        pyperclip.copy('')
         # 查到只有列表头的空白数据等3秒...orz
         for i in range(10):
             time.sleep(0.3)
             op.SendMessageW(hCtrl, MSG['WM_COMMAND'], MSG['COPY_DATA'], NODE['FORM'][-1])
-            x = pyperclip.paste().splitlines()
-            if len(x) > 1:
+            ret = pyperclip.paste().splitlines()
+            if len(ret) > 1:
                 break
-        print('take time: {}'.format(time.time() - start))
-        return x
+
+        temp = (x.split() for x in ret)
+        header = next(temp)
+        print('IT TAKE {} SECONDS TO GET REAL-TIME DATA'.format(time.time() - start))
+        return tuple(dict(zip(header, x)) for x in temp)
 
     def buy(self, symbol, price, qty, sec=0.3):
         #self.switch(NODE['BUY'][0])
@@ -220,41 +221,31 @@ class Puppet:
 
     @property
     def position(self):
-        print('实时持仓: %s' % ('$'*8))
-        form = [x.split() for x in self.copy_data(self._position, TAB['持仓'])]
-        if len(form) == 1:
-            form.append([None])
-        return dict(zip(*form))
+        return self.copy_data(self._position, TAB['持仓'])
 
     @property
     def market_value(self):
-        form = (x.split() for x in self.position)
-        index = next(form).index('市值')
-        return sum((float(row[index]) for row in form))
+        ret = self.position
+        return sum((float(pair['市值']) for pair in ret)) if ret else ret
 
     @property
     def deals(self):
         print('当天成交: %s' % ('$'*8))
         return self.copy_data(self._position, TAB['成交'])
-
     
     @property
     def entrustment(self):
         if not self._entrustment:
             self.switch(NODE['ENTRUSTMENT'])
             self._entrustment = reduce(op.GetDlgItem, NODE['FORM'], self._main)
-        form = [x.split() for x in self.copy_data(self._entrustment)]
-        if len(form) == 1:
-            form.append([None])
-        return dict(zip(*form))
+
+        return self.copy_data(self._entrustment)
 
     @property
     def cancelable(self):
         print('可撤委托: %s' % ('$'*8))
-        form = [x.split() for x in self.copy_data(self._cancelable)]
-        if len(form) == 1:
-            form.append([None])
-        return dict(zip(*form))
+        ret = self.entrustment
+        return [pair for pair in ret if '已报' in pair['备注']] if ret else ret
 
     @property
     def new(self):
