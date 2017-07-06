@@ -244,8 +244,9 @@ class Puppet:
 
     @property
     def bingo(self):
-        print('新股中签: {0}'.format('$'*8))
-        op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['中签查询'], 0)
+        self.switch(NODE['中签查询'])
+        time.sleep(0.5)
+        self._bingo = reduce(op.GetDlgItem, NODE['FORM'], self._main)
         return self.copy_data()
 
     def cancel_all(self):    # 全撤(Z)
