@@ -171,7 +171,7 @@ class Puppet:
         op.SendMessageW(self.members['买入数量'], MSG['WM_SETTEXT'], 0, str(qty))
         #op.SendMessageW(self.members['买入'], MSG['BM_CLICK'], 0, 0)
         time.sleep(sec)
-        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['买入'], self.members['买入'])
+        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['买入'], 0)
     
     def sell2(self, symbol, price, qty, sec=0.3):    # 卖出(S)
         #self.switch(NODE['双向委托'])
@@ -182,14 +182,14 @@ class Puppet:
         op.SendMessageW(self.members['卖出数量'], MSG['WM_SETTEXT'], 0, str(qty))
         #op.SendMessageW(self.members['卖出'], MSG['BM_CLICK'], 0, 0)
         time.sleep(sec)
-        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['卖出'], self.members['卖出'])
+        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['卖出'], 0)
 
     def refresh(self):    # 刷新(F5)
-        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['刷新'], self.members['刷新'])
+        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['刷新'], 0)
 
     def cancel(self, symbol=None, way='撤买'):
 
-        op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['撤单'], 0)    # 切换到撤单操作台
+        op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['撤单'], 0)
         if way and str(symbol).isdecimal():
             #print(self.copy_data())
             self.cancel_c = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
@@ -199,7 +199,7 @@ class Puppet:
             op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], CANCEL['查单'], self.cancel_ctrl['查单'])
             op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], CANCEL[way], self.cancel_ctrl[way])
         schedule = self.copy_data()
-        op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 必须返回交易操作台
+        op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['双向委托'], 0)
         return schedule
 
     @property
@@ -211,7 +211,7 @@ class Puppet:
     @property
     def position(self):
         self.switch(NODE['双向委托'])
-        return self.copy_data(self._position, TAB['持仓'])
+        return self.copy_data(self._position, ord('W'))
 
     @property
     def market_value(self):
@@ -221,7 +221,7 @@ class Puppet:
     @property
     def deals(self):
         print('当天成交: %s' % ('$'*8))
-        return self.copy_data(self._position, TAB['成交'])
+        return self.copy_data(self._position, ord('E'))
     
     @property
     def entrustment(self):
