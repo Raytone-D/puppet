@@ -247,7 +247,7 @@ class Puppet:
         self.switch(NODE['中签查询'])
         time.sleep(0.5)
         self._bingo = reduce(op.GetDlgItem, NODE['FORM'], self._main)
-        return self.copy_data()
+        return self.copy_data(self._bingo)
 
     def cancel_all(self):    # 全撤(Z)
         op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], 30001, 0)
