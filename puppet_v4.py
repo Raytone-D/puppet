@@ -103,10 +103,6 @@ class Puppet:
             time.sleep(0.3)
             x = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
             self._order.append((tuple(op.GetDlgItem(x, v) for v in parts), button, x))
-        
-        self.switch(NODE['撤单'])
-        self.cancel_c = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
-        self._cancelable = reduce(op.GetDlgItem, NODE['FORM'], self._main)
        
         self.switch(NODE['双向委托'])
         time.sleep(0.5)
@@ -187,20 +183,22 @@ class Puppet:
     def refresh(self):    # 刷新(F5)
         op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['刷新'], 0)
 
-    def cancel(self, symbol=None, way='撤买'):
-
-        op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['撤单'], 0)
-        if way and str(symbol).isdecimal():
-            #print(self.copy_data())
-            self.cancel_c = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
-            self.cancel_ctrl = {k: op.GetDlgItem(self.cancel_c, v) for k, v in CANCEL.items()}
-            op.SendMessageW(self.cancel_ctrl['填单'], MSG['WM_SETTEXT'], 0, symbol)
-            self.wait_a_second()
-            op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], CANCEL['查单'], self.cancel_ctrl['查单'])
-            op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], CANCEL[way], self.cancel_ctrl[way])
-        schedule = self.copy_data()
-        op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['双向委托'], 0)
-        return schedule
+    def cancel(self, symbol=None, choice='撤买'):
+        if self._cancel:
+            self.switch(NODE['撤单'])
+            self._cancel = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
+            self._cancel_parts = {k: op.GetDlgItem(self.cancel_c, v) for k, v in CANCEL.items()}
+        
+        if str(symbol).isdecimal():
+            op.SendMessageW(self._cancel_parts['填单'], MSG['WM_SETTEXT'], 0, symbol)
+            time.sleep(0.3)
+            op.PostMessageW(self._cancel, MSG['WM_COMMAND'], CANCEL['查单'], 0)
+            time.sleep(0.3)
+            op.PostMessageW(self._cancel, MSG['WM_COMMAND'], CANCEL[choice], 0)
+        
+        ret = self.entrustment
+        return [pair for pair in ret if '已撤' in pair['备注']] if ret else ret
+        #op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['双向委托'], 0)
 
     @property
     def balance(self):
@@ -308,3 +306,4 @@ if __name__ == '__main__':
         print(trader.market_value)
         print(trader.entrustment)        # 当日委托（可撤委托，已成委托，已撤销委托）
         print(trader.bingo)
+        #trader.cancel('002412', choice='撤卖')  # 默认撤买，可选：撤买、撤卖、全撤
