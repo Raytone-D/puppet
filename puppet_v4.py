@@ -188,7 +188,7 @@ class Puppet:
         if not self._cancel:
             self.switch(NODE['撤单'])
             self._cancel = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
-            self._cancel_parts = {k: op.GetDlgItem(self.cancel_c, v) for k, v in CANCEL.items()}
+            self._cancel_parts = {k: op.GetDlgItem(self._cancel, v) for k, v in CANCEL.items()}
         
         if str(symbol).isdecimal():
             op.SendMessageW(self._cancel_parts['填单'], MSG['WM_SETTEXT'], 0, symbol)
@@ -307,5 +307,5 @@ if __name__ == '__main__':
         #print(trader.cancelable)        # 可撤委托
         print(trader.market_value)
         print(trader.entrustment)        # 当日委托（可撤委托，已成委托，已撤销委托）
-        print(trader.bingo)
+        #print(trader.bingo)             # 注意只兼容部分券商！
         #trader.cancel('002412', choice='撤卖')  # 默认撤买，可选：撤买、撤卖、全撤
