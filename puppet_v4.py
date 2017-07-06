@@ -66,7 +66,7 @@ NEW = {'新股代码': 1032,
        '申购数量': 1034,
        '申购': 1006}
 
-RAFFLE = ['新股代码', '证券代码', '申购价格', '申购上限']
+RAFFLE = ['新股代码', '证券代码', '申购价格']# , '申购上限']
 
 VKCODE = {'F1': 112,
           'F2': 113,
@@ -267,26 +267,26 @@ class Puppet:
             print("是日无新!")
             return ret
         self._raffle = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
-        self.raffle_parts = {k: op.GetDlgItem(self.raffle, v) for k, v in NEW.items()}
+        self._raffle_parts = {k: op.GetDlgItem(self._raffle, v) for k, v in NEW.items()}
             #new = [x.split() for x in schedule.splitlines()]
             #index = [new[0].index(x) for x in RAFFLE if x in new[0]]    # 索引映射：代码0, 价格1, 数量2
             #new = map(lambda x: [x[y] for y in index], new[1:])
         for new in ret:
             symbol, price = [new[y] for y in RAFFLE if y in new.keys()]
             if symbol[0] == '3' and skip:
-                print("跳过创业板新股: {}".format(symbol)
+                print("跳过创业板新股: {}".format(symbol))
                 continue
-            op.SendMessageW(self.raffle_parts['新股代码'], MSG['WM_SETTEXT'], 0, symbol)
+            op.SendMessageW(self._raffle_parts['新股代码'], MSG['WM_SETTEXT'], 0, symbol)
             time.sleep(0.3)
-            op.SendMessageW(self.raffle_parts['申购价格'], MSG['WM_SETTEXT'], 0, price)
+            op.SendMessageW(self._raffle_parts['申购价格'], MSG['WM_SETTEXT'], 0, price)
             time.sleep(0.3)
-            op.SendMessageW(self.raffle_parts['可申购数量'], MSG['WM_GETTEXT'], 32, self.buff)
+            op.SendMessageW(self._raffle_parts['可申购数量'], MSG['WM_GETTEXT'], 32, self.buff)
             if not int(self.buff.value):
                 print('跳过零数量新股：{}'.format(symbol))
                 continue
-            op.SendMessageW(self.raffle_parts['申购数量'], MSG['WM_SETTEXT'], 0, self.buff.value)
+            op.SendMessageW(self._raffle_parts['申购数量'], MSG['WM_SETTEXT'], 0, self.buff.value)
             time.sleep(0.3)
-            op.PostMessageW(self.raffle, MSG['WM_COMMAND'], NEW['申购'], 0)
+            op.PostMessageW(self._raffle, MSG['WM_COMMAND'], NEW['申购'], 0)
 
         #op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
         return [new for new in self.cancelable if '配售申购' in new['操作']]
