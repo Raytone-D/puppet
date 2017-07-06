@@ -95,6 +95,7 @@ class Puppet:
         self.switch = lambda node: op.SendMessageW(self._main, MSG['WM_COMMAND'], node, 0)
         self._order = []
         self._position = None
+        self._cancel = None
         self._cancelable = None
         self._entrustment = None
         for i in (NODE['BUY'],NODE['SELL']):
@@ -184,7 +185,7 @@ class Puppet:
         op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['刷新'], 0)
 
     def cancel(self, symbol=None, choice='撤买'):
-        if self._cancel:
+        if not self._cancel:
             self.switch(NODE['撤单'])
             self._cancel = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
             self._cancel_parts = {k: op.GetDlgItem(self.cancel_c, v) for k, v in CANCEL.items()}
