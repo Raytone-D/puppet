@@ -85,7 +85,7 @@ def kill_popup(hDlg, name='是(&Y)'):
     for x in range(5):
         time.time(0.1)
         popup = op.GetLastActivePopup(hDlg)
-        if op.IsWindowVisible(popup):
+        if popup != hDlg and op.IsWindowVisible(popup):
             yes = op.FindWindowExW(popup, 0, 0, name)
             idYes = op.GetDlgCtrlID(yes)
             op.PostMessageW(popup, MSG['WM_COMMAND'], idYes, 0)
