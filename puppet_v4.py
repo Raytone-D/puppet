@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.16"
+__version__ = "0.4.17"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -81,6 +81,17 @@ def switch_combo(index, idCombo, hCombo):
     op.SendMessageW(hCombo, MSG['CB_SETCURSEL'], index, 0)
     op.SendMessageW(op.GetParent(hCombo), MSG['WM_COMMAND'], MSG['CBN_SELCHANGE']<<16|idCombo, hCombo)
 
+def kill_popup(hDlg, name='是(Y)'):
+    for x in range(5):
+        time.time(0.1)
+        popup = op.GetLastActivePopup(hDlg)
+        if popup:
+            yes = op.FindWindowExW(popup, 0, 0, name)
+            idYes = op.GetDlgCtrlID(yes)
+            op.PostMessageW(popup, MSG['WM_COMMAND'], idYes, 0)
+            print('popup has killed.')
+            break
+
 class Puppet:
     """
     界面自动化操控包装类
@@ -151,6 +162,8 @@ class Puppet:
             hCtrl, MSG['WM_SETTEXT'], 0, str(arg)), self._order[0][0], (symbol, price, qty)))
         time.sleep(sec)
         op.PostMessageW(self._order[0][-1], MSG['WM_COMMAND'], self._order[0][1], 0)
+        if len(str(price).split('.')[1]) == 3:
+            kill_popup(self._main)
         
     def sell(self, symbol, price, qty, sec=0.3):
         #self.switch(NODE['SELL'][0])
@@ -158,7 +171,9 @@ class Puppet:
             hCtrl, MSG['WM_SETTEXT'], 0, str(arg)), self._order[1][0], (symbol, price, qty)))
         time.sleep(sec)
         op.PostMessageW(self._order[1][-1], MSG['WM_COMMAND'], self._order[1][1], 0)
-    
+        if len(str(price).split('.')[1]) == 3:
+            kill_popup(self._main)
+
     def buy2(self, symbol, price, qty, sec=0.3):   # 买入(B)
         #self.switch(NODE['双向委托'])
         op.SendMessageW(self.members['买入代码'], MSG['WM_SETTEXT'], 0, str(symbol))
