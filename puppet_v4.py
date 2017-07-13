@@ -81,11 +81,11 @@ def switch_combo(index, idCombo, hCombo):
     op.SendMessageW(hCombo, MSG['CB_SETCURSEL'], index, 0)
     op.SendMessageW(op.GetParent(hCombo), MSG['WM_COMMAND'], MSG['CBN_SELCHANGE']<<16|idCombo, hCombo)
 
-def kill_popup(hDlg, name='是(Y)'):
+def kill_popup(hDlg, name='是(&Y)'):
     for x in range(5):
         time.time(0.1)
         popup = op.GetLastActivePopup(hDlg)
-        if popup:
+        if op.IsWindowVisible(popup):
             yes = op.FindWindowExW(popup, 0, 0, name)
             idYes = op.GetDlgCtrlID(yes)
             op.PostMessageW(popup, MSG['WM_COMMAND'], idYes, 0)
