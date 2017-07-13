@@ -1,6 +1,6 @@
 扯线木偶（puppet）
 ==
-Puppet是一个基于商业免费软件（同花顺、通达信）构建而成的闭环的A股实盘交易框架。“目前”是在建项目(WIP)。
+Puppet是一个用微软的软件测试技术MSAA/Windows UIAutomation API的思路，将部分WIN32 API包装为UIAutomation API的包装器。“目前”是在建项目(WIP)。
 --
 项目进度：界面操控API ->> 预警交互API
 
