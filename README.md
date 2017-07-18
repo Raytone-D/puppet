@@ -7,8 +7,6 @@ Puppet是一个用微软的软件测试技术MSAA/Windows UIAutomation API的思
 **"只"支持Python3.x；使用Python2.x逆行者，瘫坐伸手党，或者求学写外挂者，勿扰！仅提供文档作为上路指南，请新司机自量力而行！**
 *********************************************************************************************************************************
 
-推荐使用最新版的Anaconda3，或者Python 3.5+。系统要求：Windows平台，Win2000+；Linux平台，安装最新的WineHQ，环境设为WIN7。
-
 ### 更新
 
 2017/7/14 更新至v0.4.18，修改kill_popup()，按钮标题改为'是(&Y)'。
@@ -63,7 +61,3 @@ Puppet是一个用微软的软件测试技术MSAA/Windows UIAutomation API的思
 2017/2/21 v0.2.5发布！增加撤单（指定股票代码）功能。
 
 2017/2/14 v0.2版发布！提供后台获取持仓数据。鸣谢网友liuyukuan博文中提供的AHK代码“SendMessage,0x111,57634,0,CVirtualGridCtrl2,同花顺”。
-
-Windows下不需要安装、配置。
-
-Linux下需要安装最新版本的Wine，环境设为Windows 7，先安装同花顺交易客户端，能正常使用之后再安装Python for Windows。启动wineconsole，pip install pyperclip，之后就可以正常使用了。
