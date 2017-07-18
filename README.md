@@ -9,7 +9,7 @@ Puppet是一个用微软的软件测试技术MSAA/Windows UIAutomation API的思
 
 使用流程：手动登录客户端 --> 运行扯线木偶 --> 自动搜索已登录的客户端 --> 交易前的预备 --> 自动获取持仓数据 --> 查询预警名单 --> 客户端待命状态
 
-**"只"支持Python3.x；使用Python2.x逆行者，或者求学写外挂者，勿扰！**
+**"只"支持Python3.x；使用Python2.x逆行者，瘫坐伸手党，或者求学写外挂者，勿扰！**
 推荐使用最新版的Anaconda3，或者Python 3.5+。系统要求：Windows平台，Win2000+；Linux平台，安装最新的WineHQ，环境设为WIN7。
 
 界面操控API
