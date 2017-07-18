@@ -12,6 +12,8 @@ Puppet是一个用微软的软件测试技术MSAA/Windows UIAutomation API的思
 **"只"支持Python3.x；使用Python2.x逆行者，瘫坐伸手党，或者求学写外挂者，勿扰！**
 推荐使用最新版的Anaconda3，或者Python 3.5+。系统要求：Windows平台，Win2000+；Linux平台，安装最新的WineHQ，环境设为WIN7。
 
+可用性测试：直接运行主文件puppet_v4.py，或者引用该文件。
+
 界面操控API
 *********************************************************************************************************************************
 * method:'买入': buy(), '卖出': sell(), '撤单': cancel(), '打新': raffle(), '下单': order()，'撤买': cancel_buy(), '撤卖': cancel_sell()
