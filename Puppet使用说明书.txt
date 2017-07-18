@@ -37,6 +37,17 @@
 
 # 00开头的股票需要用字符串。
 
+使用流程：手动登录客户端 --> 运行扯线木偶 --> 自动搜索已登录的客户端 --> 交易前的预备 --> 自动获取持仓数据 --> 查询预警名单 --> 客户端待命状态
+
+可用性测试：直接运行主文件puppet_v4.py，或者引用该文件。免验证码自动登录模式仅适用于打新，无法交易。
+
+* https://github.com/hardywu/ 写了个rqalpha的接入模板PR，感谢支持鼓励！
+
+推荐使用最新版的Anaconda3，或者Python 3.5+。系统要求：Windows平台，Win2000+；Linux平台，安装最新的WineHQ，环境设为WIN7。
+Windows下不需要安装、配置。
+
+Linux下需要安装最新版本的Wine，环境设为Windows 7，先安装同花顺交易客户端，能正常使用之后再安装Python for Windows。启动wineconsole，pip install pyperclip，之后就可以正常使用了。
+
 """ 使用说明 """
 # test.py是测试单账户的可用性。
 # multi_test.py是测试多个账户的可用性。
