@@ -1,6 +1,6 @@
 扯线木偶（puppet）
 ==
-Puppet是尝试利用Win32 API构造UIAutomation API的包装器。“目前”是在建项目(WIP)。建议使用更成熟的pywinauto代之。
+Puppet是尝试利用Win32 API构造UIAutomation API的包装器。“目前”是在建项目(WIP)。生产环境建议使用更成熟的pywinauto库。
 --
 项目进度：粗略完成主要的UIAutomation API
 
