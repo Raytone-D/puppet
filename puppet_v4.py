@@ -1,5 +1,5 @@
 """
-扯线木偶界面自动化应用编程接口(Puppet UIAutomation API)，是扯线木偶量化框架(Puppet Quant Framework)的一个组件。
+扯线木偶界面自动化应用编程接口(Puppet UIAutomation API)
 技术群：624585416
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
