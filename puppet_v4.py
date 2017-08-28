@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.18"
+__version__ = "0.4.19"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -80,6 +80,11 @@ op = ctypes.windll.user32
 def switch_combo(index, idCombo, hCombo):
     op.SendMessageW(hCombo, MSG['CB_SETCURSEL'], index, 0)
     op.SendMessageW(op.GetParent(hCombo), MSG['WM_COMMAND'], MSG['CBN_SELCHANGE']<<16|idCombo, hCombo)
+
+def click_button(dialog, label):
+    handle = op.FindWindowExW(dialog, 0, 0, label)
+    id_btn = op.GetDlgItemID(handle)
+    op.PostMessageW(dialog, MSG['WM_COMMAND'], id_btn, 0)
 
 def kill_popup(hDlg, name='是(&Y)'):
     for x in range(5):
@@ -266,13 +271,13 @@ class Puppet:
         return self.copy_data(self._bingo)
 
     def cancel_all(self):    # 全撤(Z)
-        op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], 30001, 0)
+        click_button(self._order[0][-1], '全撤(Z /)')
 
     def cancel_buy(self):    # 撤买(X)
-        op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], 30002, 0)
+        click_button(self._order[0][-1], '撤卖(C)')
 
     def cancel_sell(self):    # 撤卖(C)
-        op.PostMessageW(self.cancel_c, MSG['WM_COMMAND'], 30003, 0)
+        click_button(self._order[0][-1], '撤卖(C)')
 
     def raffle(self, skip=False):    # 打新
         #op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['新股申购'], 0)
@@ -324,3 +329,6 @@ if __name__ == '__main__':
         print(trader.entrustment)        # 当日委托（可撤委托，已成委托，已撤销委托）
         #print(trader.bingo)             # 注意只兼容部分券商！
         #trader.cancel('002412', choice='撤卖')  # 默认撤买，可选：撤买、撤卖、全撤
+        #trader.cancel_all()
+        #trader.cancel_buy()
+        trader.cancel_sell()
