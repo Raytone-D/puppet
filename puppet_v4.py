@@ -83,7 +83,7 @@ def switch_combo(index, idCombo, hCombo):
 
 def click_button(dialog, label):
     handle = op.FindWindowExW(dialog, 0, 0, label)
-    id_btn = op.GetDlgItemID(handle)
+    id_btn = op.GetDlgCtrlID(handle)
     op.PostMessageW(dialog, MSG['WM_COMMAND'], id_btn, 0)
 
 def kill_popup(hDlg, name='是(&Y)'):
