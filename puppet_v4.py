@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.20beta"
+__version__ = "0.4.20b"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -173,14 +173,14 @@ class Puppet:
         fill_in(container, id_items[0], triple[0])  # 代码
         self.buff.value = ''  # False
         for n in range(1000):
+            time.sleep(0.01)
             op.SendDlgItemMessageW(container, id_items[-1], MSG['WM_GETTEXT'], 64, self.buff)
             if self.buff.value:
-                print(self.buff.value)
                 fill_in(container, id_items[1], triple[1])  # 价格
                 fill_in(container, id_items[2], triple[2])  # 数量
                 break
         click_button(container, id_items[3])  # 下单按钮
-        if len(str(price).split('.')[1]) == 3:
+        if len(str(triple[1]).split('.')[1]) == 3:  # 基金三位小数价格弹窗
             kill_popup(self._main)
 
     def buy(self, symbol, price, qty):
