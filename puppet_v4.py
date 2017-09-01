@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.19"
+__version__ = "0.4.20"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -24,12 +24,15 @@ MSG = {'WM_SETTEXT': 12,
        'CBN_SELCHANGE': 1,
        'COPY_DATA': 57634}
 
+SWITCH = {'买入': 161, '卖出': 162, '撤单': 163, '当日委托': 168,
+         '双向委托': 512, '新股申购': 554, '中签查询': 1070}
+
 NODE = {'FRAME': (59648, 59649),
         'FORM': (59648, 59649, 1047, 200, 1047),
         'ACCOUNT': (59392, 0, 1711),
         'COMBO': (59392, 0, 2322),
-        'BUY': (161, (1032, 1033, 1034), 1006),
-        'SELL':(162, (1032, 1033, 1034), 1006),
+        'BUY': (1032, 1033, 1034, 1006, 1018),
+        'SELL':(1032, 1033, 1034, 1006, 1038),
         'ENTRUSTMENT': 168,
         '撤单': 163,
         '双向委托': 512,
@@ -86,6 +89,9 @@ def click_button(dialog, label):
     id_btn = op.GetDlgCtrlID(handle)
     op.PostMessageW(dialog, MSG['WM_COMMAND'], id_btn, 0)
 
+def fill_in(cantainer, _id_item=None, _str):
+    op.SendDlgItemMessageW(container, _id_item, MSG['WM_SETTEXT'], 0, _str)
+
 def kill_popup(hDlg, name='是(&Y)'):
     for x in range(5):
         time.time(0.1)
@@ -108,22 +114,19 @@ class Puppet:
 
         print('我正在热身，稍等一下...')
         self._main = main or op.FindWindowW(0, title)
+        self.buff = ctypes.create_unicode_buffer(32)
         self.switch = lambda node: op.SendMessageW(self._main, MSG['WM_COMMAND'], node, 0)
-        self._order = []
+        if self._main:
+            self._container = {label: _get_item(_id) for label, _id in SWITCH.items()}
+
         self._position = None
         self._cancel = None
         self._cancelable = None
         self._entrustment = None
-        for i in (NODE['BUY'],NODE['SELL']):
-            node, parts, button = i
-            self.switch(node)
-            time.sleep(0.3)
-            x = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
-            self._order.append((tuple(op.GetDlgItem(x, v) for v in parts), button, x))
        
         self.switch(NODE['双向委托'])
         time.sleep(0.5)
-        self.buff = ctypes.create_unicode_buffer(32)
+
         self.two_way = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
         self.members = {k: op.GetDlgItem(self.two_way, v) for k, v in TWO_WAY.items()}
         self._position = reduce(op.GetDlgItem, NODE['FORM'], self._main)
@@ -135,6 +138,11 @@ class Puppet:
 
         #self.combo = reduce(op.GetDlgItem, NODE['COMBO'], self._main)
         #self.count = op.SendMessageW(self.combo, MSG['CB_GETCOUNT'])
+
+    def _get_item(self, _id, sec=0.2):
+        self.switch(_id)
+        time.sleep(sec)
+        return reduce(op.GetDlgItem, NODE['FRAME'], self._main)
 
     def switch_tab(self, hCtrl, keyCode, param=0):   # 单击
         op.PostMessageW(hCtrl, MSG['WM_KEYDOWN'], keyCode, param)
@@ -161,23 +169,26 @@ class Puppet:
         print('IT TAKE {} SECONDS TO GET REAL-TIME DATA'.format(time.time() - start))
         return tuple(dict(zip(header, x)) for x in temp)
 
-    def buy(self, symbol, price, qty, sec=0.3):
-        #self.switch(NODE['BUY'][0])
-        tuple(map(lambda hCtrl, arg: op.SendMessageW(
-            hCtrl, MSG['WM_SETTEXT'], 0, str(arg)), self._order[0][0], (symbol, price, qty)))
-        time.sleep(sec)
-        op.PostMessageW(self._order[0][-1], MSG['WM_COMMAND'], self._order[0][1], 0)
+    def _order(self, container, id_items, symbol, price, qty):
+        #self.switch(NODE['BUY'][0]
+        fill_in(container, id_items[0], symbol)
+        while True:
+            op.SendDlgItemMessageW(container, id_items[-1], MSG['WM_GETTEXT'], self.buff, 64)
+            if int(buff.value):
+                print(buff.value)
+                fill_in(container, id_items[1], price)
+                fill_in(container, id_items[2], qty)
+                break
+        click_button(container, id_items[3])
         if len(str(price).split('.')[1]) == 3:
             kill_popup(self._main)
-        
-    def sell(self, symbol, price, qty, sec=0.3):
+
+    def buy(self, *triple):
+        self._order(self._container['买入'], NODE['BUY'], *triple)
+
+    def sell(self, *triple):
         #self.switch(NODE['SELL'][0])
-        tuple(map(lambda hCtrl, arg: op.SendMessageW(
-            hCtrl, MSG['WM_SETTEXT'], 0, str(arg)), self._order[1][0], (symbol, price, qty)))
-        time.sleep(sec)
-        op.PostMessageW(self._order[1][-1], MSG['WM_COMMAND'], self._order[1][1], 0)
-        if len(str(price).split('.')[1]) == 3:
-            kill_popup(self._main)
+        self._order(self._container['卖出'], NODE['SELL'], *triple)
 
     def buy2(self, symbol, price, qty, sec=0.3):   # 买入(B)
         #self.switch(NODE['双向委托'])
