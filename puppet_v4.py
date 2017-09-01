@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.20"
+__version__ = "0.4.20beta"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -24,15 +24,14 @@ MSG = {'WM_SETTEXT': 12,
        'CBN_SELCHANGE': 1,
        'COPY_DATA': 57634}
 
-SWITCH = {'买入': 161, '卖出': 162, '撤单': 163, '当日委托': 168,
-         '双向委托': 512, '新股申购': 554, '中签查询': 1070}
+INIT = {'买入': 161, '卖出': 162}
 
 NODE = {'FRAME': (59648, 59649),
         'FORM': (59648, 59649, 1047, 200, 1047),
         'ACCOUNT': (59392, 0, 1711),
         'COMBO': (59392, 0, 2322),
-        'BUY': (1032, 1033, 1034, 1006, 1018),
-        'SELL':(1032, 1033, 1034, 1006, 1038),
+        'BUY': (1032, 1033, 1034, '买入[B]', 1018),
+        'SELL':(1032, 1033, 1034, '卖出[S]', 1038),
         'ENTRUSTMENT': 168,
         '撤单': 163,
         '双向委托': 512,
@@ -89,7 +88,7 @@ def click_button(dialog, label):
     id_btn = op.GetDlgCtrlID(handle)
     op.PostMessageW(dialog, MSG['WM_COMMAND'], id_btn, 0)
 
-def fill_in(cantainer, _id_item=None, _str):
+def fill_in(container, _id_item, _str):
     op.SendDlgItemMessageW(container, _id_item, MSG['WM_SETTEXT'], 0, _str)
 
 def kill_popup(hDlg, name='是(&Y)'):
@@ -117,7 +116,7 @@ class Puppet:
         self.buff = ctypes.create_unicode_buffer(32)
         self.switch = lambda node: op.SendMessageW(self._main, MSG['WM_COMMAND'], node, 0)
         if self._main:
-            self._container = {label: _get_item(_id) for label, _id in SWITCH.items()}
+            self._container = {label: self._get_item(_id) for label, _id in INIT.items()}
 
         self._position = None
         self._cancel = None
@@ -169,26 +168,27 @@ class Puppet:
         print('IT TAKE {} SECONDS TO GET REAL-TIME DATA'.format(time.time() - start))
         return tuple(dict(zip(header, x)) for x in temp)
 
-    def _order(self, container, id_items, symbol, price, qty):
+    def _order(self, container, id_items, *triple):
         #self.switch(NODE['BUY'][0]
-        fill_in(container, id_items[0], symbol)
-        while True:
-            op.SendDlgItemMessageW(container, id_items[-1], MSG['WM_GETTEXT'], self.buff, 64)
-            if int(buff.value):
-                print(buff.value)
-                fill_in(container, id_items[1], price)
-                fill_in(container, id_items[2], qty)
+        fill_in(container, id_items[0], triple[0])  # 代码
+        self.buff.value = ''  # False
+        for n in range(1000):
+            op.SendDlgItemMessageW(container, id_items[-1], MSG['WM_GETTEXT'], 64, self.buff)
+            if self.buff.value:
+                print(self.buff.value)
+                fill_in(container, id_items[1], triple[1])  # 价格
+                fill_in(container, id_items[2], triple[2])  # 数量
                 break
-        click_button(container, id_items[3])
+        click_button(container, id_items[3])  # 下单按钮
         if len(str(price).split('.')[1]) == 3:
             kill_popup(self._main)
 
-    def buy(self, *triple):
-        self._order(self._container['买入'], NODE['BUY'], *triple)
+    def buy(self, symbol, price, qty):
+        self._order(self._container['买入'], NODE['BUY'], symbol, price, qty)
 
-    def sell(self, *triple):
+    def sell(self, symbol, price, qty):
         #self.switch(NODE['SELL'][0])
-        self._order(self._container['卖出'], NODE['SELL'], *triple)
+        self._order(self._container['卖出'], NODE['SELL'], symbol, price, qty)
 
     def buy2(self, symbol, price, qty, sec=0.3):   # 买入(B)
         #self.switch(NODE['双向委托'])
@@ -282,13 +282,13 @@ class Puppet:
         return self.copy_data(self._bingo)
 
     def cancel_all(self):    # 全撤(Z)
-        click_button(self._order[0][-1], '全撤(Z /)')
+        click_button(self._container['买入'], '全撤(Z /)')
 
     def cancel_buy(self):    # 撤买(X)
-        click_button(self._order[0][-1], '撤卖(C)')
+        click_button(self._container['买入'], '撤卖(C)')
 
     def cancel_sell(self):    # 撤卖(C)
-        click_button(self._order[0][-1], '撤卖(C)')
+        click_button(self._container['买入'], '撤卖(C)')
 
     def raffle(self, skip=False):    # 打新
         #op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['新股申购'], 0)
@@ -343,3 +343,5 @@ if __name__ == '__main__':
         #trader.cancel_all()
         #trader.cancel_buy()
         trader.cancel_sell()
+        limit = '510160', '0.557', '100'
+        trader.buy(*limit)
