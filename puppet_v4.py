@@ -93,7 +93,7 @@ def fill_in(container, _id_item, _str):
 
 def kill_popup(hDlg, name='是(&Y)'):
     for x in range(5):
-        time.time(0.1)
+        time.sleep(0.1)
         popup = op.GetLastActivePopup(hDlg)
         if popup != hDlg and op.IsWindowVisible(popup):
             yes = op.FindWindowExW(popup, 0, 0, name)
