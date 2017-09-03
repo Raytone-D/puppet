@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.21b"
+__version__ = "0.4.21c"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -24,7 +24,7 @@ MSG = {'WM_SETTEXT': 12,
        'CBN_SELCHANGE': 1,
        'COPY_DATA': 57634}
 
-INIT = {'买入': 161, '卖出': 162}
+INIT = {'买入': 161, '卖出': 162, '撤单': 163}
 
 NODE = {'FRAME': (59648, 59649),
         'FORM': (59648, 59649, 1047, 200, 1047),
@@ -32,6 +32,7 @@ NODE = {'FRAME': (59648, 59649),
         'COMBO': (59392, 0, 2322),
         'BUY': (1032, 1033, 1034, '买入[B]', 1036, 1018),
         'SELL':(1032, 1033, 1034, '卖出[S]', 1036, 1038),
+        'CANCEL': (3348, '查询代码', '撤单'),
         'ENTRUSTMENT': 168,
         '撤单': 163,
         '双向委托': 512,
@@ -48,18 +49,7 @@ TWO_WAY = {'买入代码': 1032,
            '卖出': 1008,
            '可用余额': 1038,
            '刷新': 32790,
-           '全撤': 30001,
-           '撤买': 30002,
-           '撤卖': 30003,
            '报表': 1047}
-
-CANCEL = {'全选': 1098,
-          '撤单': 1099,
-          '全撤': 30001,
-          '撤买': 30002,
-          '撤卖': 30003,
-          '填单': 3348,
-          '查单': 3349}
 
 NEW = {'新股代码': 1032,
        '新股名称': 1036,
@@ -118,11 +108,8 @@ class Puppet:
         if self._main:
             self._container = {label: self._get_item(_id) for label, _id in INIT.items()}
 
-        self._position = None
-        self._cancel = None
-        self._cancelable = None
-        self._entrustment = None
-       
+        self._position, self._cancelable, self._entrustment = None, None, None
+
         self.switch(NODE['双向委托'])
         time.sleep(0.5)
 
@@ -138,7 +125,7 @@ class Puppet:
         #self.combo = reduce(op.GetDlgItem, NODE['COMBO'], self._main)
         #self.count = op.SendMessageW(self.combo, MSG['CB_GETCOUNT'])
 
-    def _get_item(self, _id, sec=0.2):
+    def _get_item(self, _id, sec=0.5):
         self.switch(_id)
         time.sleep(sec)
         return reduce(op.GetDlgItem, NODE['FRAME'], self._main)
@@ -222,22 +209,14 @@ class Puppet:
     def refresh(self):    # 刷新(F5)
         op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['刷新'], 0)
 
-    def cancel(self, symbol=None, choice='撤买'):
-        if not self._cancel:
-            self.switch(NODE['撤单'])
-            self._cancel = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
-            self._cancel_parts = {k: op.GetDlgItem(self._cancel, v) for k, v in CANCEL.items()}
-        
-        if str(symbol).isdecimal():
-            op.SendMessageW(self._cancel_parts['填单'], MSG['WM_SETTEXT'], 0, symbol)
-            time.sleep(0.3)
-            op.PostMessageW(self._cancel, MSG['WM_COMMAND'], CANCEL['查单'], 0)
-            time.sleep(0.3)
-            op.PostMessageW(self._cancel, MSG['WM_COMMAND'], CANCEL[choice], 0)
-        
+    def cancel(self, symbol=None, choice='buy'):
+        # 撤销指定代码的买单或者卖单。symbol必须是有效的证券代码。按代码撤单只在备注栏是“已报”状态才有效！
+        fill_in(self._container['撤单'], NODE['CANCEL'][0], symbol)  # 填写代码
+        click_button(self._container['撤单'], NODE['CANCEL'][1])  # 查询代码
+        # 这里用撤单按钮的状态判断是否下一步
+        self.cancel_sell() if choice == 'sell' else self.cancel_buy()
         ret = self.entrustment
         return [pair for pair in ret if '已撤' in pair['备注']] if ret else ret
-        #op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['双向委托'], 0)
 
     @property
     def balance(self):
@@ -288,14 +267,14 @@ class Puppet:
         self._bingo = reduce(op.GetDlgItem, NODE['FORM'], self._main)
         return self.copy_data(self._bingo)
 
-    def cancel_all(self):    # 全撤(Z)
-        click_button(self._container['买入'], '全撤(Z /)')
+    def cancel_all(self):    # 全撤(Z)  # 只有撤单窗的按钮才能做到无弹窗撤单
+        click_button(self._container['撤单'], '全撤(Z /)')
 
     def cancel_buy(self):    # 撤买(X)
-        click_button(self._container['买入'], '撤卖(C)')
+        click_button(self._container['撤单'], '撤买(X)')
 
     def cancel_sell(self):    # 撤卖(C)
-        click_button(self._container['买入'], '撤卖(C)')
+        click_button(self._container['撤单'], '撤卖(C)')
 
     def raffle(self, skip=False):    # 打新
         #op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['新股申购'], 0)
@@ -346,7 +325,7 @@ if __name__ == '__main__':
         print(trader.market_value)
         print(trader.entrustment)        # 当日委托（可撤委托，已成委托，已撤销委托）
         #print(trader.bingo)             # 注意只兼容部分券商！
-        #trader.cancel('002412', choice='撤卖')  # 默认撤买，可选：撤买、撤卖、全撤
+        #trader.cancel('002412')         # 默认choice='buy'，可选：'sell'
         #trader.cancel_all()
         #trader.cancel_buy()
         trader.cancel_sell()
