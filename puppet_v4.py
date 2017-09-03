@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.20c"
+__version__ = "0.4.21"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -30,8 +30,8 @@ NODE = {'FRAME': (59648, 59649),
         'FORM': (59648, 59649, 1047, 200, 1047),
         'ACCOUNT': (59392, 0, 1711),
         'COMBO': (59392, 0, 2322),
-        'BUY': (1032, 1033, 1034, '买入[B]', 1018),
-        'SELL':(1032, 1033, 1034, '卖出[S]', 1038),
+        'BUY': (1032, 1033, 1034, '买入[B]', 1036, 1018),
+        'SELL':(1032, 1033, 1034, '卖出[S]', 1036, 1038),
         'ENTRUSTMENT': 168,
         '撤单': 163,
         '双向委托': 512,
@@ -92,8 +92,8 @@ def fill_in(container, _id_item, _str):
     op.SendDlgItemMessageW(container, _id_item, MSG['WM_SETTEXT'], 0, _str)
 
 def kill_popup(hDlg, name='是(&Y)'):
-    for x in range(5):
-        time.sleep(0.1)
+    for x in range(100):
+        time.sleep(0.01)
         popup = op.GetLastActivePopup(hDlg)
         if popup != hDlg and op.IsWindowVisible(popup):
             yes = op.FindWindowExW(popup, 0, 0, name)
@@ -168,17 +168,21 @@ class Puppet:
         print('IT TAKE {} SECONDS TO GET REAL-TIME DATA'.format(time.time() - start))
         return tuple(dict(zip(header, x)) for x in temp)
 
+    def _wait(self, container, id_item):
+        self.buff.value = ''  # False，待假成真
+        for n in range(500):
+            time.sleep(0.01)
+            op.SendDlgItemMessageW(container, id_item, MSG['WM_GETTEXT'], 64, self.buff)
+            if self.buff.value:
+                break
+
     def _order(self, container, id_items, *triple):
         #self.switch(NODE['BUY'][0]
-        fill_in(container, id_items[0], triple[0])  # 代码
-        self.buff.value = ''  # False
-        for n in range(1000):
-            time.sleep(0.01)
-            op.SendDlgItemMessageW(container, id_items[-1], MSG['WM_GETTEXT'], 64, self.buff)
-            if self.buff.value:
-                fill_in(container, id_items[1], triple[1])  # 价格
-                fill_in(container, id_items[2], triple[2])  # 数量
-                break
+        fill_in(container, id_items[0], triple[0])  # 证券代码
+        self._wait(container, id_item[-2])  # 证券名称
+        fill_in(container, id_items[1], triple[1])  # 价格
+        self._wait(container, id_item[-1])  # 可用数量
+        fill_in(container, id_items[2], triple[2])  # 数量
         click_button(container, id_items[3])  # 下单按钮
         if len(str(triple[1]).split('.')[1]) == 3:  # 基金三位小数价格弹窗
             kill_popup(self._main)
