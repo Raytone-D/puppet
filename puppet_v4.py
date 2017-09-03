@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.21"
+__version__ = "0.4.21a"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -179,9 +179,9 @@ class Puppet:
     def _order(self, container, id_items, *triple):
         #self.switch(NODE['BUY'][0]
         fill_in(container, id_items[0], triple[0])  # 证券代码
-        self._wait(container, id_item[-2])  # 证券名称
+        self._wait(container, id_items[-2])  # 证券名称
         fill_in(container, id_items[1], triple[1])  # 价格
-        self._wait(container, id_item[-1])  # 可用数量
+        self._wait(container, id_items[-1])  # 可用数量
         fill_in(container, id_items[2], triple[2])  # 数量
         click_button(container, id_items[3])  # 下单按钮
         if len(str(triple[1]).split('.')[1]) == 3:  # 基金三位小数价格弹窗
