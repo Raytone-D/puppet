@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.21a"
+__version__ = "0.4.21b"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -163,8 +163,11 @@ class Puppet:
             if len(ret) > 1:
                 break
 
-        temp = (x.split() for x in ret)
+        temp = (x.split('\t') for x in ret)
         header = next(temp)
+        if '参考市值' in header:
+            header.insert(header.index('参考市值'), '市值')
+            header.remove('参考市值')
         print('IT TAKE {} SECONDS TO GET REAL-TIME DATA'.format(time.time() - start))
         return tuple(dict(zip(header, x)) for x in temp)
 
