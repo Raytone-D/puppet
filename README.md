@@ -1,7 +1,8 @@
 
 ### 界面自动化应用编程接口(UIAutomation API)
-为“界面量化而生”
---
+
+为“界面量化而生”，解放双手，抛弃键鼠，拥抱未来！
+---
 
 
 ![Image text](https://github.com/Raytone-D/puppet/blob/master/archives/run_puppet.JPG)
