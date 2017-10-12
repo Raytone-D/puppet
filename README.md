@@ -2,7 +2,7 @@
 ### 本项目已经搁置。请移步pywinauto学习。
 
 运行：
-![Image text](puppet/archives/run_puppet.JPG)
+![Image text](https://github.com/Raytone-D/puppet/blob/master/archives/run_puppet.JPG)
 
 免配置，免安装，直接运行。
 支持以下券商：
