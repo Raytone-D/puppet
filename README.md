@@ -2,8 +2,7 @@
 ### 本项目已经搁置。请移步pywinauto学习。
 
 运行：
-D:\> python puppet_v4.py
-
+![Image text](puppet/archives/run_puppet.JPG)
 
 免配置，免安装，直接运行。
 支持以下券商：
