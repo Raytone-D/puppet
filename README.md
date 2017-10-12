@@ -1,6 +1,10 @@
 
 ### 本项目已经搁置。请移步pywinauto学习。
 
+运行：
+D:\> python puppet_v4.py
+
+
 免配置，免安装，直接运行。
 支持以下券商：
     广发证券  核新-独立委托端 : http://store.gf.com.cn/terminal/index.html?_gfsrc=newgfw_x_x_pc
