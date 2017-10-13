@@ -1,7 +1,6 @@
 扯线木偶（puppet）
 ==
-项目停止开发！
---
+
 Puppet是尝试利用Win32 API构造UIAutomation API的包装器。“目前”是在建项目(WIP)。生产环境建议使用更成熟的pywinauto库。
 --
 
