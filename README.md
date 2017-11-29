@@ -5,7 +5,7 @@
 --
 **puppet扯线木偶目前仅适用于独立交易端核新版(即THS)，需配合交易框架(hikyuu, quantaxis, rqalpha, vnpy, etc)使用。**
 
-免配置安装。
+免配置安装，运行前需要先自行登录交易客户端。
 
 ![Image text](https://github.com/Raytone-D/puppet/blob/master/archives/run_puppet.JPG)
 
