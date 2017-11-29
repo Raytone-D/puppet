@@ -9,7 +9,9 @@
 
 ![Image text](https://github.com/Raytone-D/puppet/blob/master/archives/run_puppet.JPG)
 
-**支持以下券商：（对版本有限制）**
+**支持以下券商：（券商官网的交易端有可能因为版本升级导致puppet失效）**
+
+链接: https://pan.baidu.com/s/1miT8zs0 密码: gg2h
 
     广发证券  核新-独立委托端 : http://store.gf.com.cn/terminal/index.html?_gfsrc=newgfw_x_x_pc
     华泰证券  独立下单系统V5.18.56 : http://www.htsc.com.cn/browser/softInfoAction.do?method=searchP&currentMenu=softInfo
