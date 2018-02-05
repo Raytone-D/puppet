@@ -234,7 +234,7 @@ class Puppet:
     @property
     def market_value(self):
         ret = self.position
-        return sum((float(pair['市值']) for pair in ret)) if ret else ret
+        return sum((float(pair['市值']) for pair in ret)) if ret else 0.0
 
     @property
     def deals(self):
