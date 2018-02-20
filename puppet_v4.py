@@ -252,8 +252,9 @@ class Puppet:
     @property
     def cancelable(self):
         print('可撤委托: %s' % ('$'*8))
-        ret = self.entrustment
-        return [pair for pair in ret if '已报' in pair['备注']] if ret else ret
+        return self.copy_data(self._position, ord('R'))
+        #ret = self.entrustment
+        #return [pair for pair in ret if '已报' in pair['备注']] if ret else ret
 
     @property
     def new(self):
