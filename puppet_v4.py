@@ -143,8 +143,8 @@ class Puppet:
         start = time.time()
         print("正在等待实时数据返回，请稍候...")
         # 查到只有列表头的空白数据等3秒...orz
-        for i in range(10):
-            time.sleep(0.3)
+        for i in range(100):
+            time.sleep(0.05)
             op.SendMessageW(hCtrl, MSG['WM_COMMAND'], MSG['COPY_DATA'], NODE['FORM'][-1])
             ret = pyperclip.paste().splitlines()
             if len(ret) > 1:
