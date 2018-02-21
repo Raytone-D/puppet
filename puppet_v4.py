@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.22"
+__version__ = "0.4.23"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -224,7 +224,7 @@ class Puppet:
         time.sleep(0.5)
         print('可用余额: %s' % ('$'*8))
         op.SendMessageW(self.members['可用余额'], MSG['WM_GETTEXT'], 32, self.buff)
-        return self.buff.value
+        return float(self.buff.value)
 
     @property
     def position(self):
