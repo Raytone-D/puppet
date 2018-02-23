@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.23"
+__version__ = "0.4.25"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -218,8 +218,7 @@ class Puppet:
     @property
     def balance(self):
         self.switch(NODE['双向委托'])
-        time.sleep(0.5)
-        print('可用余额: %s' % ('$'*8))
+        self.refresh()
         op.SendMessageW(self.members['可用余额'], MSG['WM_GETTEXT'], 32, self.buff)
         return float(self.buff.value)
 
