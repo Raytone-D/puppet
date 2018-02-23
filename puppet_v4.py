@@ -137,25 +137,22 @@ class Puppet:
 
     def copy_data(self, hCtrl, key=0):    # background mode
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板，默认取当前的表格"
-        if key:
-            self.switch_tab(self.two_way, key)    # 切换到持仓('W')、成交('E')、委托('R')
-
         start = time.time()
-        print("正在等待实时数据返回，请稍候...")
-        # 查到只有列表头的空白数据等3秒...orz
+        if key:
+            self.switch(NODE['双向委托'])  
+            self.switch_tab(self.two_way, key)    # 切换到持仓('W')、成交('E')、委托('R')
         for i in range(100):
             time.sleep(0.05)
             op.SendMessageW(hCtrl, MSG['WM_COMMAND'], MSG['COPY_DATA'], NODE['FORM'][-1])
             ret = pyperclip.paste().splitlines()
             if len(ret) > 1:
                 break
-
         temp = (x.split('\t') for x in ret)
         header = next(temp)
         if '参考市值' in header:
             header.insert(header.index('参考市值'), '市值')
             header.remove('参考市值')
-        print('IT TAKE {} SECONDS TO GET REAL-TIME DATA'.format(time.time() - start))
+        print('it take {} loop, {} seconds.'.format(i, time.time() - start))
         return tuple(dict(zip(header, x)) for x in temp)
 
     def _wait(self, container, id_item):
@@ -228,7 +225,6 @@ class Puppet:
 
     @property
     def position(self):
-        self.switch(NODE['双向委托'])
         return self.copy_data(self._position, ord('W'))
 
     @property
@@ -238,7 +234,6 @@ class Puppet:
 
     @property
     def deals(self):
-        print('当天成交: %s' % ('$'*8))
         return self.copy_data(self._position, ord('E'))
     
     @property
