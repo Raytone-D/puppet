@@ -4,14 +4,18 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.25"
+__version__ = "0.4.26"
 __license__ = 'MIT'
 
 # coding: utf-8
 import ctypes
 from functools import reduce
 import time
-import pyperclip
+
+try:
+    import pyperclip
+except ImportError as e:
+    print("{}\n请先在命令行下运行：pip install pyperclip，再使用puppet！".format(e))
 
 MSG = {'WM_SETTEXT': 12,
        'WM_GETTEXT': 13,
