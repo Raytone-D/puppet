@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.26"
+__version__ = "0.4.27"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -249,8 +249,10 @@ class Puppet:
 
     @property
     def cancelable(self):
-        print('可撤委托: %s' % ('$'*8))
-        return self.copy_data(self._position, ord('R'))
+        if not self._cancelable:
+            self.switch(NODE['撤单'])
+            self._cancelable = reduce(op.GetDlgItem, NODE['FORM'], self._main)
+        return self.copy_data(self._cancelable)
         #ret = self.entrustment
         #return [pair for pair in ret if '已报' in pair['备注']] if ret else ret
 
