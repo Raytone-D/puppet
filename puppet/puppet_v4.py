@@ -4,13 +4,14 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.29"
+__version__ = "0.4.30"
 __license__ = 'MIT'
 
 # coding: utf-8
 import ctypes
 from functools import reduce
 import time
+import sys
 
 try:
     import pyperclip
@@ -106,7 +107,7 @@ class Puppet:
     """
     def __init__(self, main=None, title='网上股票交易系统5.0'):
 
-        print('我正在热身，稍等一下...')
+        print('木偶: 欢迎使用Puppet TraderApi, version {}'.format(__version__)
         self._main = main or op.FindWindowW(0, title)
         self.buff = ctypes.create_unicode_buffer(32)
         self.switch = lambda node: op.SendMessageW(self._main, MSG['WM_COMMAND'], node, 0)
@@ -121,7 +122,9 @@ class Puppet:
         self.two_way = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
         self.members = {k: op.GetDlgItem(self.two_way, v) for k, v in TWO_WAY.items()}
         self._position = reduce(op.GetDlgItem, NODE['FORM'], self._main)
-        print('我准备好了，开干吧！人生巅峰在前面！') if self._main else print("没找到已登录的客户交易端，我先撤了！")
+        if not self._main:
+              print("木偶：客户交易端没登录，我先撤了！")
+              sys.exit('木偶：错误的标题字符串"{}"！'.format(title))
         # 获取登录账号
         self.account = reduce(op.GetDlgItem, NODE['ACCOUNT'], self._main)
         op.SendMessageW(self.account, MSG['WM_GETTEXT'], 32, self.buff)
