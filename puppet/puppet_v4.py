@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.28"
+__version__ = "0.4.29"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -96,6 +96,7 @@ def kill_popup(hDlg, name='是(&Y)'):
             print('popup has killed.')
             break
 
+
 class Puppet:
     """
     界面自动化操控包装类
@@ -141,6 +142,7 @@ class Puppet:
 
     def copy_data(self, hCtrl, key=0):
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板"
+        _replace = {'参考市值': '市值', '最新市值': '市值'}  # 兼容国金/平安"最新市值"、银河“参考市值”。
         start = time.time()
         if key:
             self.switch(NODE['双向委托'])  # 激活对话框窗口，保证正常切换到成交和委托控件。
@@ -153,9 +155,10 @@ class Puppet:
                 break
         temp = (x.split('\t') for x in ret)
         header = next(temp)
-        if '参考市值' in header:
-            header.insert(header.index('参考市值'), '市值')
-            header.remove('参考市值')
+        for tag, value in _replace.items():
+            if tag in header:
+                header.insert(header.index(tag), value)
+                header.remove(tag)
         print('it take {} loop, {} seconds.'.format(i, time.time() - start))
         return tuple(dict(zip(header, x)) for x in temp)
 
@@ -210,9 +213,15 @@ class Puppet:
     def refresh(self):    # 刷新(F5)
         op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['刷新'], 0)
 
+    def cancel(self, symbol=None, choice='buy'):
+        print("请尽快将"buy"改成"cancel_buy", "sell"改成"cancel_sell"，并移植到cancel_order方法。")
+        time.sleep(3)
+        cases = {'buy': 'cancel_buy', 'sell': 'cancel_sell'}
+        cancel_order(cases.get(choice))
+    
     def cancel_order(self, symbol=None, choice='cancel_all', symbolid=3348, nMarket=None, orderId=None):
-        """撤销代码为symbol的下单，choice参数决定操作行为，默认“全撤”，可选“买单”、“卖单”或"撤单"
-            "撤单"是撤销指定股票的全部委托。
+        """撤销订单，choice选择操作的结果，默认“cancel_all”，可选“cancel_buy”、“cancel_sell”或"cancel"
+            "cancel"是撤销指定股票symbol的全部委托。
         """
         hDlg = self._container['撤单']
         symbol = str(symbol)
@@ -342,9 +351,9 @@ if __name__ == '__main__':
         print(trader.market_value)
         print(trader.entrustment)        # 当日委托（可撤委托，已成委托，已撤销委托）
         #print(trader.bingo)             # 注意只兼容部分券商！
-        #trader.cancel('002412')         # 默认choice='buy'，可选：'sell'
         #trader.cancel_all()
         #trader.cancel_buy()
         trader.cancel_sell()
         limit = '510160', '0.557', '100'
         trader.buy(*limit)
+        trader.cancel_order('000001', 'cancel')
