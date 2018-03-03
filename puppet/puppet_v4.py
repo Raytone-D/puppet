@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.27"
+__version__ = "0.4.28"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -139,14 +139,14 @@ class Puppet:
         time.sleep(0.1)
         op.PostMessageW(hCtrl, MSG['WM_KEYUP'], keyCode, param)
 
-    def copy_data(self, hCtrl, key=0):    # background mode
-        "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板，默认取当前的表格"
+    def copy_data(self, hCtrl, key=0):
+        "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板"
         start = time.time()
         if key:
-            self.switch(NODE['双向委托'])  
-            self.switch_tab(self.two_way, key)    # 切换到持仓('W')、成交('E')、委托('R')
-        for i in range(100):
-            time.sleep(0.05)
+            self.switch(NODE['双向委托'])  # 激活对话框窗口，保证正常切换到成交和委托控件。
+            self.switch_tab(self.two_way, key)
+        for i in range(10):
+            time.sleep(0.3)
             op.SendMessageW(hCtrl, MSG['WM_COMMAND'], MSG['COPY_DATA'], NODE['FORM'][-1])
             ret = pyperclip.paste().splitlines()
             if len(ret) > 1:
@@ -210,15 +210,29 @@ class Puppet:
     def refresh(self):    # 刷新(F5)
         op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['刷新'], 0)
 
-    def cancel(self, symbol=None, choice='buy'):
-        # 撤销指定代码的买单或者卖单。symbol必须是有效的证券代码。按代码撤单只在备注栏是“已报”状态才有效！
-        fill_in(self._container['撤单'], NODE['CANCEL'][0], symbol)  # 填写代码
-        click_button(self._container['撤单'], NODE['CANCEL'][1])  # 查询代码
-        # 这里用撤单按钮的状态判断是否下一步
-        self.cancel_sell() if choice == 'sell' else self.cancel_buy()
-        ret = self.entrustment
-        return [pair for pair in ret if '已撤' in pair['备注']] if ret else ret
-
+    def cancel_order(self, symbol=None, choice='cancel_all', symbolid=3348, nMarket=None, orderId=None):
+        """撤销代码为symbol的下单，choice参数决定操作行为，默认“全撤”，可选“买单”、“卖单”或"撤单"
+            "撤单"是撤销指定股票的全部委托。
+        """
+        hDlg = self._container['撤单']
+        symbol = str(symbol)
+        if symbol:
+            fill_in(hDlg, symbolid, symbol)
+            for i in range(10):
+                time.sleep(0.3)
+                click_button(hDlg, '查询代码')
+                hButton = op.FindWindowExW(hDlg, 0, 0, '撤单')
+                # 撤单按钮的状态检查
+                if op.IsWindowEnabled(hButton):
+                    break
+        cases = {
+            'cancel_all': '全撤(Z /)',
+            'cancel_buy': '撤买(X)',
+            'cancel_sell': '撤卖(C)',
+            'cancel': '撤单'
+        }
+        click_button(hDlg, cases.get(choice))
+    
     @property
     def balance(self):
         self.switch(NODE['双向委托'])
