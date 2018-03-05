@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.30"
+__version__ = "0.4.31"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -297,12 +297,15 @@ class Puppet:
         return self.copy_data(self._bingo)
 
     def cancel_all(self):    # 全撤(Z)  # 只有撤单窗的按钮才能做到无弹窗撤单
+        print("请用trader.cancel_order('cancel_all') 取代trader.cancel_all()")
         click_button(self._container['撤单'], '全撤(Z /)')
 
     def cancel_buy(self):    # 撤买(X)
+        print("请用trader.cancel_order('cancel_buy') 取代trader.cancel_buy()")
         click_button(self._container['撤单'], '撤买(X)')
 
     def cancel_sell(self):    # 撤卖(C)
+        print("请用trader.cancel_order('cancel_sell') 取代trader.cancel_sell()")
         click_button(self._container['撤单'], '撤卖(C)')
 
     def raffle(self, skip=False):    # 打新
