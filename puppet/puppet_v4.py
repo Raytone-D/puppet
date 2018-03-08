@@ -107,7 +107,7 @@ class Puppet:
     """
     def __init__(self, main=None, title='网上股票交易系统5.0'):
 
-        print('木偶: 欢迎使用Puppet TraderApi, version {}'.format(__version__)
+        print('木偶: 欢迎使用Puppet TraderApi, version {}'.format(__version__))
         self._main = main or op.FindWindowW(0, title)
         self.buff = ctypes.create_unicode_buffer(32)
         self.switch = lambda node: op.SendMessageW(self._main, MSG['WM_COMMAND'], node, 0)
