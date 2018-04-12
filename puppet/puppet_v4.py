@@ -4,7 +4,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.32"
+__version__ = "0.4.33"
 __license__ = 'MIT'
 
 # coding: utf-8
@@ -218,12 +218,6 @@ class Puppet:
     def refresh(self):    # 刷新(F5)
         op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['刷新'], 0)
 
-    def cancel(self, symbol=None, choice='buy'):
-        print("请尽快将"buy"改成"cancel_buy", "sell"改成"cancel_sell"，并移植到cancel_order方法。")
-        time.sleep(3)
-        cases = {'buy': 'cancel_buy', 'sell': 'cancel_sell'}
-        cancel_order(cases.get(choice))
-    
     def cancel_order(self, symbol=None, choice='cancel_all', symbolid=3348, nMarket=None, orderId=None):
         """撤销订单，choice选择操作的结果，默认“cancel_all”，可选“cancel_buy”、“cancel_sell”或"cancel"
             "cancel"是撤销指定股票symbol的全部委托。
@@ -298,17 +292,14 @@ class Puppet:
         self._bingo = reduce(op.GetDlgItem, NODE['FORM'], self._main)
         return self.copy_data(self._bingo)
 
-    def cancel_all(self):    # 全撤(Z)  # 只有撤单窗的按钮才能做到无弹窗撤单
-        print("请用trader.cancel_order('cancel_all') 取代trader.cancel_all()")
-        click_button(self._container['撤单'], '全撤(Z /)')
+    def cancel_all(self):  # 全撤
+        self.cancel_order()
 
-    def cancel_buy(self):    # 撤买(X)
-        print("请用trader.cancel_order('cancel_buy') 取代trader.cancel_buy()")
-        click_button(self._container['撤单'], '撤买(X)')
+    def cancel_buy(self):  # 撤买
+        self.cancel_order(choice='cancel_buy')
 
-    def cancel_sell(self):    # 撤卖(C)
-        print("请用trader.cancel_order('cancel_sell') 取代trader.cancel_sell()")
-        click_button(self._container['撤单'], '撤卖(C)')
+    def cancel_sell(self):  # 撤卖
+        self.cancel_order(choice='cancel_sell')
 
     def raffle(self, skip=False):    # 打新
         #op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['新股申购'], 0)
@@ -350,7 +341,7 @@ if __name__ == '__main__':
     #trader = Puppet(title='广发证券核新网上交易系统7.60')
     if trader.account:
         print(trader.account)           # 帐号
-        print(trader.new)               # 查当天新股名单
+        #print(trader.new)               # 查当天新股名单
         #trader.raffle()                # 打新，skip=True, 跳过创业板不打。
         #print(trader.balance)           # 可用余额
         #print(trader.position)          # 实时持仓
@@ -359,9 +350,7 @@ if __name__ == '__main__':
         print(trader.market_value)
         print(trader.entrustment)        # 当日委托（可撤委托，已成委托，已撤销委托）
         #print(trader.bingo)             # 注意只兼容部分券商！
-        #trader.cancel_all()
-        #trader.cancel_buy()
-        trader.cancel_sell()
         limit = '510160', '0.557', '100'
-        trader.buy(*limit)
-        trader.cancel_order('000001', 'cancel')
+        trader.sell(*limit)
+        #trader.cancel_order('000001', 'cancel')  # 取代cancel()方法。
+        trader.cancel_buy()
