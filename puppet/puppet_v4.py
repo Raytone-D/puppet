@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """
 扯线木偶界面自动化应用编程接口(Puppet UIAutomation API)
 技术群：624585416
@@ -7,7 +8,6 @@ __project__ = 'Puppet'
 __version__ = "0.4.33"
 __license__ = 'MIT'
 
-# coding: utf-8
 import ctypes
 from functools import reduce
 import time
@@ -16,7 +16,7 @@ import platform
 
 try:
     import pyperclip
-except ImportError as e:
+except Exception as e:
     print("{}\n请先在命令行下运行：pip install pyperclip，再使用puppet！".format(e))
 
 MSG = {'WM_SETTEXT': 12,
