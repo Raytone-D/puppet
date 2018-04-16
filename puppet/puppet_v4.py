@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.33"
+__version__ = "0.4.34"
 __license__ = 'MIT'
 
 import ctypes
@@ -112,13 +112,13 @@ class Puppet:
         print('{}\nPython version: {}'.format(platform.platform(), platform.python_version()))
         self._main = main or op.FindWindowW(0, title)
         self.buff = ctypes.create_unicode_buffer(32)
-        self.switch = lambda node: op.SendMessageW(self._main, MSG['WM_COMMAND'], node, 0)
+        self._switch = lambda node: op.SendMessageW(self._main, MSG['WM_COMMAND'], node, 0)
         if self._main:
             self._container = {label: self._get_item(_id) for label, _id in INIT.items()}
 
         self._position, self._cancelable, self._entrustment = None, None, None
 
-        self.switch(NODE['双向委托'])
+        self._switch(NODE['双向委托'])
         time.sleep(0.5)
 
         self.two_way = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
@@ -136,7 +136,7 @@ class Puppet:
         #self.count = op.SendMessageW(self.combo, MSG['CB_GETCOUNT'])
 
     def _get_item(self, _id, sec=0.5):
-        self.switch(_id)
+        self._switch(_id)
         time.sleep(sec)
         return reduce(op.GetDlgItem, NODE['FRAME'], self._main)
 
@@ -150,7 +150,7 @@ class Puppet:
         _replace = {'参考市值': '市值', '最新市值': '市值'}  # 兼容国金/平安"最新市值"、银河“参考市值”。
         start = time.time()
         if key:
-            self.switch(NODE['双向委托'])  # 激活对话框窗口，保证正常切换到成交和委托控件。
+            self._switch(NODE['双向委托'])  # 激活对话框窗口，保证正常切换到成交和委托控件。
             self.switch_tab(self.two_way, key)
         for i in range(10):
             time.sleep(0.3)
@@ -176,7 +176,7 @@ class Puppet:
                 break
 
     def _order(self, container, id_items, *triple):
-        #self.switch(NODE['BUY'][0]
+        #self._switch(NODE['BUY'][0]
         fill_in(container, id_items[0], triple[0])  # 证券代码
         self._wait(container, id_items[-2])  # 证券名称
         fill_in(container, id_items[1], triple[1])  # 价格
@@ -190,11 +190,11 @@ class Puppet:
         self._order(self._container['买入'], NODE['BUY'], symbol, price, qty)
 
     def sell(self, symbol, price, qty):
-        #self.switch(NODE['SELL'][0])
+        #self._switch(NODE['SELL'][0])
         self._order(self._container['卖出'], NODE['SELL'], symbol, price, qty)
 
     def buy2(self, symbol, price, qty, sec=0.3):   # 买入(B)
-        #self.switch(NODE['双向委托'])
+        #self._switch(NODE['双向委托'])
         op.SendMessageW(self.members['买入代码'], MSG['WM_SETTEXT'], 0, str(symbol))
         time.sleep(0.1)
         op.SendMessageW(self.members['买入价格'], MSG['WM_SETTEXT'], 0, str(price))
@@ -205,7 +205,7 @@ class Puppet:
         op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['买入'], 0)
     
     def sell2(self, symbol, price, qty, sec=0.3):    # 卖出(S)
-        #self.switch(NODE['双向委托'])
+        #self._switch(NODE['双向委托'])
         op.SendMessageW(self.members['卖出代码'], MSG['WM_SETTEXT'], 0, str(symbol))
         time.sleep(0.1)
         op.SendMessageW(self.members['卖出价格'], MSG['WM_SETTEXT'], 0, str(price))
@@ -243,7 +243,7 @@ class Puppet:
     
     @property
     def balance(self):
-        self.switch(NODE['双向委托'])
+        self._switch(NODE['双向委托'])
         self.refresh()
         op.SendMessageW(self.members['可用余额'], MSG['WM_GETTEXT'], 32, self.buff)
         return float(self.buff.value)
@@ -264,7 +264,7 @@ class Puppet:
     @property
     def entrustment(self):
         if not self._entrustment:
-            self.switch(NODE['ENTRUSTMENT'])
+            self._switch(NODE['ENTRUSTMENT'])
             self._entrustment = reduce(op.GetDlgItem, NODE['FORM'], self._main)
 
         return self.copy_data(self._entrustment)
@@ -272,7 +272,7 @@ class Puppet:
     @property
     def cancelable(self):
         if not self._cancelable:
-            self.switch(NODE['撤单'])
+            self._switch(NODE['撤单'])
             self._cancelable = reduce(op.GetDlgItem, NODE['FORM'], self._main)
         return self.copy_data(self._cancelable)
         #ret = self.entrustment
@@ -280,14 +280,14 @@ class Puppet:
 
     @property
     def new(self):
-        self.switch(NODE['新股申购'])
+        self._switch(NODE['新股申购'])
         time.sleep(0.5)
         self._new = reduce(op.GetDlgItem, NODE['FORM'], self._main)
         return self.copy_data(self._new)
 
     @property
     def bingo(self):
-        self.switch(NODE['中签查询'])
+        self._switch(NODE['中签查询'])
         time.sleep(0.5)
         self._bingo = reduce(op.GetDlgItem, NODE['FORM'], self._main)
         return self.copy_data(self._bingo)
