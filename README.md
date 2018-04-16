@@ -3,6 +3,8 @@
 
 基于UIAutomation技术实现程序化交易接口，突破量化交易桎梏！
 --
+推荐：没有动手能力的编程新手请使用实盘易https://www.iguuu.com/e
+--
 警告！某些新版本的交易客户端存在兼容性问题，强烈推荐使用以下备用版本。
 --
 备用链接: https://pan.baidu.com/s/1radY1fI 密码: m9db
