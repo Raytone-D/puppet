@@ -223,7 +223,6 @@ class Puppet:
             "cancel"是撤销指定股票symbol的全部委托。
         """
         hDlg = self._container['撤单']
-        symbol = str(symbol)
         if symbol:
             fill_in(hDlg, symbolid, symbol)
             for i in range(10):
