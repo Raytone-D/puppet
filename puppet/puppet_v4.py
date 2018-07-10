@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.34"
+__version__ = "0.4.35"
 __license__ = 'MIT'
 
 import ctypes
@@ -112,6 +112,7 @@ class Puppet:
         print('{}\nPython version: {}'.format(platform.platform(), platform.python_version()))
         self._main = main or op.FindWindowW(0, title)
         self.buff = ctypes.create_unicode_buffer(32)
+        self.close_popup() # 关闭"自动升级提示"弹窗
         self._switch = lambda node: op.SendMessageW(self._main, MSG['WM_COMMAND'], node, 0)
         if self._main:
             self._container = {label: self._get_item(_id) for label, _id in INIT.items()}
@@ -134,6 +135,14 @@ class Puppet:
 
         #self.combo = reduce(op.GetDlgItem, NODE['COMBO'], self._main)
         #self.count = op.SendMessageW(self.combo, MSG['CB_GETCOUNT'])
+
+    def close_popup(self, button_label='以后再说', delay=0.5):
+        for i in range(5):
+            handle = user32.GetLastActivePopup(self.root)
+            if handle:
+                click_button(handle, button_label)
+                return 1
+            time.sleep(delay)
 
     def _get_item(self, _id, sec=0.5):
         self._switch(_id)
