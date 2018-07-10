@@ -112,7 +112,7 @@ class Puppet:
         print('{}\nPython version: {}'.format(platform.platform(), platform.python_version()))
         self._main = main or op.FindWindowW(0, title)
         self.buff = ctypes.create_unicode_buffer(32)
-        self.close_popup() # 关闭"自动升级提示"弹窗
+        self.close_popup(delay=0.1) # 关闭"自动升级提示"弹窗
         self._switch = lambda node: op.SendMessageW(self._main, MSG['WM_COMMAND'], node, 0)
         if self._main:
             self._container = {label: self._get_item(_id) for label, _id in INIT.items()}
