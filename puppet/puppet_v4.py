@@ -73,28 +73,28 @@ VKCODE = {'F1': 112,
           'F5': 116,
           'F6': 117}
 
-op = ctypes.windll.user32
+user32 = ctypes.windll.user32
 
 def switch_combo(index, idCombo, hCombo):
-    op.SendMessageW(hCombo, MSG['CB_SETCURSEL'], index, 0)
-    op.SendMessageW(op.GetParent(hCombo), MSG['WM_COMMAND'], MSG['CBN_SELCHANGE']<<16|idCombo, hCombo)
+    user32.SendMessageW(hCombo, MSG['CB_SETCURSEL'], index, 0)
+    user32.SendMessageW(user32.GetParent(hCombo), MSG['WM_COMMAND'], MSG['CBN_SELCHANGE']<<16|idCombo, hCombo)
 
 def click_button(dialog, label):
-    handle = op.FindWindowExW(dialog, 0, 0, label)
-    id_btn = op.GetDlgCtrlID(handle)
-    op.PostMessageW(dialog, MSG['WM_COMMAND'], id_btn, 0)
+    handle = user32.FindWindowExW(dialog, 0, 0, label)
+    id_btn = user32.GetDlgCtrlID(handle)
+    user32.PostMessageW(dialog, MSG['WM_COMMAND'], id_btn, 0)
 
 def fill_in(container, _id_item, _str):
-    op.SendDlgItemMessageW(container, _id_item, MSG['WM_SETTEXT'], 0, _str)
+    user32.SendDlgItemMessageW(container, _id_item, MSG['WM_SETTEXT'], 0, _str)
 
 def kill_popup(hDlg, name='是(&Y)'):
     for x in range(100):
         time.sleep(0.01)
-        popup = op.GetLastActivePopup(hDlg)
-        if popup != hDlg and op.IsWindowVisible(popup):
-            yes = op.FindWindowExW(popup, 0, 0, name)
-            idYes = op.GetDlgCtrlID(yes)
-            op.PostMessageW(popup, MSG['WM_COMMAND'], idYes, 0)
+        popup = user32.GetLastActivePopup(hDlg)
+        if popup != hDlg and user32.IsWindowVisible(popup):
+            yes = user32.FindWindowExW(popup, 0, 0, name)
+            idYes = user32.GetDlgCtrlID(yes)
+            user32.PostMessageW(popup, MSG['WM_COMMAND'], idYes, 0)
             print('popup has killed.')
             break
 
@@ -110,32 +110,27 @@ class Puppet:
 
         print('木偶: 欢迎使用Puppet TraderApi, version {}'.format(__version__))
         print('{}\nPython version: {}'.format(platform.platform(), platform.python_version()))
-        self._main = main or op.FindWindowW(0, title)
-        self.buff = ctypes.create_unicode_buffer(32)
-        user32.ShowOwnedPopups(self._main, False)
+
+        self._root = main or user32.FindWindowW(0, title)
+        self._buf = ctypes.create_unicode_buffer(32)
+        user32.ShowOwnedPopups(self._root, False)
         #self.close_popup(delay=0.1) # 关闭"自动升级提示"弹窗
-        self._switch = lambda node: op.SendMessageW(self._main, MSG['WM_COMMAND'], node, 0)
-        if self._main:
+
+        if self._root:
             self._container = {label: self._get_item(_id) for label, _id in INIT.items()}
 
         self._position, self._cancelable, self._entrustment = None, None, None
 
         self._switch(NODE['双向委托'])
         time.sleep(0.5)
-
-        self.two_way = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
-        self.members = {k: op.GetDlgItem(self.two_way, v) for k, v in TWO_WAY.items()}
-        self._position = reduce(op.GetDlgItem, NODE['FORM'], self._main)
-        if not self._main:
+        self.two_way = reduce(user32.GetDlgItem, NODE['FRAME'], self._root)
+        self.members = {k: user32.GetDlgItem(self.two_way, v) for k, v in TWO_WAY.items()}
+        self._position = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
+        if not self._root:
               print("木偶：客户交易端没登录，我先撤了！")
               sys.exit('木偶：错误的标题字符串"{}"！'.format(title))
-        # 获取登录账号
-        self.account = reduce(op.GetDlgItem, NODE['ACCOUNT'], self._main)
-        op.SendMessageW(self.account, MSG['WM_GETTEXT'], 32, self.buff)
-        self.account = self.buff.value
 
-        #self.combo = reduce(op.GetDlgItem, NODE['COMBO'], self._main)
-        #self.count = op.SendMessageW(self.combo, MSG['CB_GETCOUNT'])
+    def _switch(self, node): user32.SendMessageW(self._root, MSG['WM_COMMAND'], node, 0)
 
     def close_popup(self, button_label='以后再说', delay=0.5):
         for i in range(5):
@@ -148,12 +143,12 @@ class Puppet:
     def _get_item(self, _id, sec=0.5):
         self._switch(_id)
         time.sleep(sec)
-        return reduce(op.GetDlgItem, NODE['FRAME'], self._main)
+        return reduce(user32.GetDlgItem, NODE['FRAME'], self._root)
 
     def switch_tab(self, hCtrl, keyCode, param=0):   # 单击
-        op.PostMessageW(hCtrl, MSG['WM_KEYDOWN'], keyCode, param)
+        user32.PostMessageW(hCtrl, MSG['WM_KEYDOWN'], keyCode, param)
         time.sleep(0.1)
-        op.PostMessageW(hCtrl, MSG['WM_KEYUP'], keyCode, param)
+        user32.PostMessageW(hCtrl, MSG['WM_KEYUP'], keyCode, param)
 
     def copy_data(self, hCtrl, key=0):
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板"
@@ -164,7 +159,7 @@ class Puppet:
             self.switch_tab(self.two_way, key)
         for i in range(10):
             time.sleep(0.3)
-            op.SendMessageW(hCtrl, MSG['WM_COMMAND'], MSG['COPY_DATA'], NODE['FORM'][-1])
+            user32.SendMessageW(hCtrl, MSG['WM_COMMAND'], MSG['COPY_DATA'], NODE['FORM'][-1])
             ret = pyperclip.paste().splitlines()
             if len(ret) > 1:
                 break
@@ -178,11 +173,11 @@ class Puppet:
         return tuple(dict(zip(header, x)) for x in temp)
 
     def _wait(self, container, id_item):
-        self.buff.value = ''  # False，待假成真
+        self._buf.value = ''  # False，待假成真
         for n in range(500):
             time.sleep(0.01)
-            op.SendDlgItemMessageW(container, id_item, MSG['WM_GETTEXT'], 64, self.buff)
-            if self.buff.value:
+            user32.SendDlgItemMessageW(container, id_item, MSG['WM_GETTEXT'], 64, self._buf)
+            if self._buf.value:
                 break
 
     def _order(self, container, id_items, *triple):
@@ -194,7 +189,7 @@ class Puppet:
         fill_in(container, id_items[2], triple[2])  # 数量
         click_button(container, id_items[3])  # 下单按钮
         if len(str(triple[1]).split('.')[1]) == 3:  # 基金三位小数价格弹窗
-            kill_popup(self._main)
+            kill_popup(self._root)
 
     def buy(self, symbol, price, qty):
         self._order(self._container['买入'], NODE['BUY'], symbol, price, qty)
@@ -205,28 +200,28 @@ class Puppet:
 
     def buy2(self, symbol, price, qty, sec=0.3):   # 买入(B)
         #self._switch(NODE['双向委托'])
-        op.SendMessageW(self.members['买入代码'], MSG['WM_SETTEXT'], 0, str(symbol))
+        user32.SendMessageW(self.members['买入代码'], MSG['WM_SETTEXT'], 0, str(symbol))
         time.sleep(0.1)
-        op.SendMessageW(self.members['买入价格'], MSG['WM_SETTEXT'], 0, str(price))
+        user32.SendMessageW(self.members['买入价格'], MSG['WM_SETTEXT'], 0, str(price))
         time.sleep(0.1)
-        op.SendMessageW(self.members['买入数量'], MSG['WM_SETTEXT'], 0, str(qty))
-        #op.SendMessageW(self.members['买入'], MSG['BM_CLICK'], 0, 0)
+        user32.SendMessageW(self.members['买入数量'], MSG['WM_SETTEXT'], 0, str(qty))
+        #user32.SendMessageW(self.members['买入'], MSG['BM_CLICK'], 0, 0)
         time.sleep(sec)
-        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['买入'], 0)
-    
+        user32.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['买入'], 0)
+
     def sell2(self, symbol, price, qty, sec=0.3):    # 卖出(S)
         #self._switch(NODE['双向委托'])
-        op.SendMessageW(self.members['卖出代码'], MSG['WM_SETTEXT'], 0, str(symbol))
+        user32.SendMessageW(self.members['卖出代码'], MSG['WM_SETTEXT'], 0, str(symbol))
         time.sleep(0.1)
-        op.SendMessageW(self.members['卖出价格'], MSG['WM_SETTEXT'], 0, str(price))
+        user32.SendMessageW(self.members['卖出价格'], MSG['WM_SETTEXT'], 0, str(price))
         time.sleep(0.1)
-        op.SendMessageW(self.members['卖出数量'], MSG['WM_SETTEXT'], 0, str(qty))
-        #op.SendMessageW(self.members['卖出'], MSG['BM_CLICK'], 0, 0)
+        user32.SendMessageW(self.members['卖出数量'], MSG['WM_SETTEXT'], 0, str(qty))
+        #user32.SendMessageW(self.members['卖出'], MSG['BM_CLICK'], 0, 0)
         time.sleep(sec)
-        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['卖出'], 0)
+        user32.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['卖出'], 0)
 
     def refresh(self):    # 刷新(F5)
-        op.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['刷新'], 0)
+        user32.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['刷新'], 0)
 
     def cancel_order(self, symbol=None, choice='cancel_all', symbolid=3348, nMarket=None, orderId=None):
         """撤销订单，choice选择操作的结果，默认“cancel_all”，可选“cancel_buy”、“cancel_sell”或"cancel"
@@ -238,9 +233,9 @@ class Puppet:
             for i in range(10):
                 time.sleep(0.3)
                 click_button(hDlg, '查询代码')
-                hButton = op.FindWindowExW(hDlg, 0, 0, '撤单')
+                hButton = user32.FindWindowExW(hDlg, 0, 0, '撤单')
                 # 撤单按钮的状态检查
-                if op.IsWindowEnabled(hButton):
+                if user32.IsWindowEnabled(hButton):
                     break
         cases = {
             'cancel_all': '全撤(Z /)',
@@ -249,13 +244,19 @@ class Puppet:
             'cancel': '撤单'
         }
         click_button(hDlg, cases.get(choice))
-    
+
+    @property
+    def account(self):
+        handle = reduce(user32.GetDlgItem, NODE['ACCOUNT'], self._root)
+        user32.SendMessageW(handle, MSG['WM_GETTEXT'], 32, self._buf)
+        return self._buf.value
+
     @property
     def balance(self):
         self._switch(NODE['双向委托'])
         self.refresh()
-        op.SendMessageW(self.members['可用余额'], MSG['WM_GETTEXT'], 32, self.buff)
-        return float(self.buff.value)
+        user32.SendMessageW(self.members['可用余额'], MSG['WM_GETTEXT'], 32, self._buf)
+        return float(self._buf.value)
 
     @property
     def position(self):
@@ -269,12 +270,12 @@ class Puppet:
     @property
     def deals(self):
         return self.copy_data(self._position, ord('E'))
-    
+
     @property
     def entrustment(self):
         if not self._entrustment:
             self._switch(NODE['ENTRUSTMENT'])
-            self._entrustment = reduce(op.GetDlgItem, NODE['FORM'], self._main)
+            self._entrustment = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
 
         return self.copy_data(self._entrustment)
 
@@ -282,7 +283,7 @@ class Puppet:
     def cancelable(self):
         if not self._cancelable:
             self._switch(NODE['撤单'])
-            self._cancelable = reduce(op.GetDlgItem, NODE['FORM'], self._main)
+            self._cancelable = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
         return self.copy_data(self._cancelable)
         #ret = self.entrustment
         #return [pair for pair in ret if '已报' in pair['备注']] if ret else ret
@@ -291,14 +292,14 @@ class Puppet:
     def new(self):
         self._switch(NODE['新股申购'])
         time.sleep(0.5)
-        self._new = reduce(op.GetDlgItem, NODE['FORM'], self._main)
+        self._new = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
         return self.copy_data(self._new)
 
     @property
     def bingo(self):
         self._switch(NODE['中签查询'])
         time.sleep(0.5)
-        self._bingo = reduce(op.GetDlgItem, NODE['FORM'], self._main)
+        self._bingo = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
         return self.copy_data(self._bingo)
 
     def cancel_all(self):  # 全撤
@@ -311,16 +312,16 @@ class Puppet:
         self.cancel_order(choice='cancel_sell')
 
     def raffle(self, skip=False):    # 打新
-        #op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['新股申购'], 0)
-        #self._raffle = reduce(op.GetDlgItem, NODE['FORM'], self._main)
+        #user32.SendMessageW(self._root, MSG['WM_COMMAND'], NODE['新股申购'], 0)
+        #self._raffle = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
         #close_pop()    # 弹窗无需关闭，不影响交易。
         #schedule = self.copy_data(self._raffle)
         ret = self.new
         if not ret:
             print("是日无新!")
             return ret
-        self._raffle = reduce(op.GetDlgItem, NODE['FRAME'], self._main)
-        self._raffle_parts = {k: op.GetDlgItem(self._raffle, v) for k, v in NEW.items()}
+        self._raffle = reduce(user32.GetDlgItem, NODE['FRAME'], self._root)
+        self._raffle_parts = {k: user32.GetDlgItem(self._raffle, v) for k, v in NEW.items()}
             #new = [x.split() for x in schedule.splitlines()]
             #index = [new[0].index(x) for x in RAFFLE if x in new[0]]    # 索引映射：代码0, 价格1, 数量2
             #new = map(lambda x: [x[y] for y in index], new[1:])
@@ -329,19 +330,19 @@ class Puppet:
             if symbol[0] == '3' and skip:
                 print("跳过创业板新股: {}".format(symbol))
                 continue
-            op.SendMessageW(self._raffle_parts['新股代码'], MSG['WM_SETTEXT'], 0, symbol)
+            user32.SendMessageW(self._raffle_parts['新股代码'], MSG['WM_SETTEXT'], 0, symbol)
             time.sleep(0.3)
-            op.SendMessageW(self._raffle_parts['申购价格'], MSG['WM_SETTEXT'], 0, price)
+            user32.SendMessageW(self._raffle_parts['申购价格'], MSG['WM_SETTEXT'], 0, price)
             time.sleep(0.3)
-            op.SendMessageW(self._raffle_parts['可申购数量'], MSG['WM_GETTEXT'], 32, self.buff)
-            if not int(self.buff.value):
+            user32.SendMessageW(self._raffle_parts['可申购数量'], MSG['WM_GETTEXT'], 32, self._buf)
+            if not int(self._buf.value):
                 print('跳过零数量新股：{}'.format(symbol))
                 continue
-            op.SendMessageW(self._raffle_parts['申购数量'], MSG['WM_SETTEXT'], 0, self.buff.value)
+            user32.SendMessageW(self._raffle_parts['申购数量'], MSG['WM_SETTEXT'], 0, self._buf.value)
             time.sleep(0.3)
-            op.PostMessageW(self._raffle, MSG['WM_COMMAND'], NEW['申购'], 0)
+            user32.PostMessageW(self._raffle, MSG['WM_COMMAND'], NEW['申购'], 0)
 
-        #op.SendMessageW(self._main, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
+        #user32.SendMessageW(self._root, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
         return [new for new in self.cancelable if '配售申购' in new['操作']]
 
 if __name__ == '__main__':
