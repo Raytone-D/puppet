@@ -5,14 +5,15 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.4.36"
+__version__ = "0.5"
 __license__ = 'MIT'
 
 import ctypes
-from functools import reduce
 import time
-import sys
 import platform
+from functools import reduce
+from collections import OrderedDict
+
 
 try:
     import pyperclip
@@ -21,6 +22,7 @@ except Exception as e:
 
 MSG = {'WM_SETTEXT': 12,
        'WM_GETTEXT': 13,
+       'WM_CLOSE': 16,
        'WM_KEYDOWN': 256,
        'WM_KEYUP': 257,
        'WM_COMMAND': 273,
@@ -64,6 +66,13 @@ NEW = {'新股代码': 1032,
        '申购数量': 1034,
        '申购': 1006}
 
+PATH = r'D:\Utils\海通证券委托\xiadan.exe'
+
+LOGIN = {
+    '连当前站点': '海通',
+    '确定': '华泰'
+}
+
 RAFFLE = ['新股代码', '证券代码', '申购价格']# , '申购上限']
 
 VKCODE = {'F1': 112,
@@ -106,31 +115,136 @@ class Puppet:
     # 属性 # '帐号': account, '可用余额': balance, '持仓': position, '成交': deals, '可撤委托': cancelable, 
     #      # '新股': new, '中签': bingo, 
     """
-    def __init__(self, main=None, title='网上股票交易系统5.0'):
+    buf_length = 32
 
-        print('木偶: 欢迎使用Puppet TraderApi, version {}'.format(__version__))
-        print('{}\nPython version: {}'.format(platform.platform(), platform.python_version()))
+    def __init__(self, title='网上股票交易系统5.0', main=None, **kwrags):
 
-        self._root = main or user32.FindWindowW(0, title)
+        print('Puppet TraderApi, version {}'.format(__version__))
         self._buf = ctypes.create_unicode_buffer(32)
-        user32.ShowOwnedPopups(self._root, False)
-        #self.close_popup(delay=0.1) # 关闭"自动升级提示"弹窗
+        self.title = title
+        self.life = 0
+        self.init(root=main)
 
-        if self._root:
-            self._container = {label: self._get_item(_id) for label, _id in INIT.items()}
+    def init(self, retry=1, **kwargs):
+        start = time.time()
 
-        self._position, self._cancelable, self._entrustment = None, None, None
+        delay = 0 if retry <=1 else 1
+        for i in range(retry):
+            time.sleep(delay) # important
+            self._root = kwargs.get('root') or user32.FindWindowW(0, self.title)
+            print(i, self._root)
+            self.visible = user32.IsWindowVisible(self._root)
+            if self.visible:
+                print('木偶："正在热身..."')
+                #self.close_popup(delay=0.1) # 关闭"自动升级提示"弹窗
+                self._position, self._cancelable, self._entrustment = None, None, None
+                user32.ShowOwnedPopups(self._root, False)
 
-        self._switch(NODE['双向委托'])
-        time.sleep(0.5)
-        self.two_way = reduce(user32.GetDlgItem, NODE['FRAME'], self._root)
-        self.members = {k: user32.GetDlgItem(self.two_way, v) for k, v in TWO_WAY.items()}
-        self._position = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
-        if not self._root:
-              print("木偶：客户交易端没登录，我先撤了！")
-              sys.exit('木偶：错误的标题字符串"{}"！'.format(title))
+                self._container = {label: self._get_item(_id) for label, _id in INIT.items()}
+                self.switch(NODE['双向委托'])
+                time.sleep(0.5)
 
-    def _switch(self, node): user32.SendMessageW(self._root, MSG['WM_COMMAND'], node, 0)
+                self.two_way = reduce(user32.GetDlgItem, NODE['FRAME'], self._root)
+                self.members = {k: user32.GetDlgItem(self.two_way, v) for k, v in TWO_WAY.items()}
+                self._position = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
+                self.life += 1
+                print('木偶："我准备好了"')
+                break
+        print("cost:", time.time() - start)
+
+    def wait(self, delay=1):
+        time.sleep(delay)
+        return self
+
+    def run(self, client_path):
+        start = time.time()
+        import subprocess
+        assert 'xiadan' in client_path and subprocess.os.path.isfile(client_path), '客户端路径错误'
+        print('{} 正在尝试运行客户端...'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start))))
+        subprocess.Popen(client_path, shell=True)
+        self.path = client_path
+
+        print("cost:", time.time() - start)
+
+    def init_login(self, retry=10):
+        start = time.time()
+
+        for i in range(retry):
+            time.sleep(0.5) # important
+            self._hLogin = user32.FindWindowExW(None, None, '#32770', '用户登录')
+            visible = user32.IsWindowVisible(self._hLogin) # 登录窗口可见, 2s+
+            if visible:
+                for label in LOGIN.keys():
+                    committer = user32.FindWindowExW(self._hLogin, None, 'Button', label)
+                    if user32.IsWindowVisible(committer):
+                        self._label = label
+                        self.broker = LOGIN[label]
+                        print(committer)
+                        print('找到了{}证券客户端登录窗口'.format(self.broker))
+                        break
+                break
+
+        time.sleep(1) # important
+        print("cost:", time.time() - start)
+        assert visible, '客户端没有运行或者找不到名为「{}」的窗口'.format('用户登录')
+        assert committer, '提交按钮标识错误'
+        #self._running = True
+
+    def login(self, account_no=None, password=None, comm_pwd=None, client_path=None, retry=10, **kwargs):
+        """ 重新登录或切换账户
+            account_no: 账号, str
+            password: 交易密码, str
+            comm_pwd: 通讯密码, str
+        """
+        self.run(client_path or PATH)
+        self.init_login()
+        start = time.time()
+        print('{} 正在尝试登入交易服务器...'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start))))
+
+        @ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, ctypes.c_wchar_p)
+        def match(handle, args):
+            ret = True
+            if user32.IsWindowVisible(handle):
+                user32.GetClassNameW(handle, self._buf, self.buf_length)
+                class_name = self._buf.value
+                if class_name == 'Edit':
+                    try:
+                        text = next(lparam)
+                        print(text)
+                        self.fill(handle, text)
+                    except:
+                        ret = False
+            return ret
+
+        lparam = [account_no, password, comm_pwd]
+        #assert all(lparam), '用户登录参数不全'
+        lparam = iter(lparam)
+        user32.EnumChildWindows(self._hLogin, match, None)
+        time.sleep(0.5) # important
+        self.commit(self._hLogin, self._label)
+        print("cost:", time.time() - start)
+
+        self.visible = False
+        self.init(retry)
+        return self
+
+    def exit(self):
+        "退出系统并关闭程序"
+        assert self.life, "客户端没有登录"
+        user32.PostMessageW(self._root, MSG['WM_CLOSE'], 0, 0)
+        self.life = 0
+        return self
+
+    def switch(self, node): user32.SendMessageW(self._root, MSG['WM_COMMAND'], node, 0)
+
+    def fill(self, editor, text):
+        "fill in"
+        user32.SendMessageW(editor, MSG['WM_SETTEXT'], 0, text)
+
+    def commit(self, leader, label='确定'):
+        committer = user32.FindWindowExW(leader, 0, 'Button', label)
+        idCommitter = user32.GetDlgCtrlID(committer)
+        user32.PostMessageW(leader, MSG['WM_COMMAND'], idCommitter, 0)
 
     def close_popup(self, button_label='以后再说', delay=0.5):
         for i in range(5):
@@ -141,7 +255,7 @@ class Puppet:
             time.sleep(delay)
 
     def _get_item(self, _id, sec=0.5):
-        self._switch(_id)
+        self.switch(_id)
         time.sleep(sec)
         return reduce(user32.GetDlgItem, NODE['FRAME'], self._root)
 
@@ -155,7 +269,7 @@ class Puppet:
         _replace = {'参考市值': '市值', '最新市值': '市值'}  # 兼容国金/平安"最新市值"、银河“参考市值”。
         start = time.time()
         if key:
-            self._switch(NODE['双向委托'])  # 激活对话框窗口，保证正常切换到成交和委托控件。
+            self.switch(NODE['双向委托'])  # 激活对话框窗口，保证正常切换到成交和委托控件。
             self.switch_tab(self.two_way, key)
         for i in range(10):
             time.sleep(0.3)
@@ -170,7 +284,7 @@ class Puppet:
                 header.insert(header.index(tag), value)
                 header.remove(tag)
         print('it take {} loop, {} seconds.'.format(i, time.time() - start))
-        return tuple(dict(zip(header, x)) for x in temp)
+        return [OrderedDict(zip(header, x)) for x in temp]
 
     def _wait(self, container, id_item):
         self._buf.value = ''  # False，待假成真
@@ -181,7 +295,7 @@ class Puppet:
                 break
 
     def _order(self, container, id_items, *triple):
-        #self._switch(NODE['BUY'][0]
+        #self.switch(NODE['BUY'][0]
         fill_in(container, id_items[0], triple[0])  # 证券代码
         self._wait(container, id_items[-2])  # 证券名称
         fill_in(container, id_items[1], triple[1])  # 价格
@@ -195,11 +309,11 @@ class Puppet:
         self._order(self._container['买入'], NODE['BUY'], symbol, price, qty)
 
     def sell(self, symbol, price, qty):
-        #self._switch(NODE['SELL'][0])
+        #self.switch(NODE['SELL'][0])
         self._order(self._container['卖出'], NODE['SELL'], symbol, price, qty)
 
     def buy2(self, symbol, price, qty, sec=0.3):   # 买入(B)
-        #self._switch(NODE['双向委托'])
+        #self.switch(NODE['双向委托'])
         user32.SendMessageW(self.members['买入代码'], MSG['WM_SETTEXT'], 0, str(symbol))
         time.sleep(0.1)
         user32.SendMessageW(self.members['买入价格'], MSG['WM_SETTEXT'], 0, str(price))
@@ -210,7 +324,7 @@ class Puppet:
         user32.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['买入'], 0)
 
     def sell2(self, symbol, price, qty, sec=0.3):    # 卖出(S)
-        #self._switch(NODE['双向委托'])
+        #self.switch(NODE['双向委托'])
         user32.SendMessageW(self.members['卖出代码'], MSG['WM_SETTEXT'], 0, str(symbol))
         time.sleep(0.1)
         user32.SendMessageW(self.members['卖出价格'], MSG['WM_SETTEXT'], 0, str(price))
@@ -253,7 +367,7 @@ class Puppet:
 
     @property
     def balance(self):
-        self._switch(NODE['双向委托'])
+        self.switch(NODE['双向委托'])
         self.refresh()
         user32.SendMessageW(self.members['可用余额'], MSG['WM_GETTEXT'], 32, self._buf)
         return float(self._buf.value)
@@ -274,7 +388,7 @@ class Puppet:
     @property
     def entrustment(self):
         if not self._entrustment:
-            self._switch(NODE['ENTRUSTMENT'])
+            self.switch(NODE['ENTRUSTMENT'])
             self._entrustment = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
 
         return self.copy_data(self._entrustment)
@@ -282,7 +396,7 @@ class Puppet:
     @property
     def cancelable(self):
         if not self._cancelable:
-            self._switch(NODE['撤单'])
+            self.switch(NODE['撤单'])
             self._cancelable = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
         return self.copy_data(self._cancelable)
         #ret = self.entrustment
@@ -290,14 +404,19 @@ class Puppet:
 
     @property
     def new(self):
-        self._switch(NODE['新股申购'])
+        self.switch(NODE['新股申购'])
         time.sleep(0.5)
         self._new = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
         return self.copy_data(self._new)
 
     @property
     def bingo(self):
-        self._switch(NODE['中签查询'])
+        try:
+            assert self.broker == '海通', '中签查询不支持{}证券！'.format(self.broker)
+        except Exception as e:
+            print(e, "\n该券商的中签查询未经测试，注意复查。")
+
+        self.switch(NODE['中签查询'])
         time.sleep(0.5)
         self._bingo = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
         return self.copy_data(self._bingo)
@@ -345,22 +464,23 @@ class Puppet:
         #user32.SendMessageW(self._root, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
         return [new for new in self.cancelable if '配售申购' in new['操作']]
 
+
 if __name__ == '__main__':
- 
-    trader = Puppet()
-    #trader = Puppet(title='广发证券核新网上交易系统7.60')
-    if trader.account:
-        print(trader.account)           # 帐号
-        #print(trader.new)               # 查当天新股名单
-        #trader.raffle()                # 打新，skip=True, 跳过创业板不打。
-        #print(trader.balance)           # 可用余额
-        #print(trader.position)          # 实时持仓
-        #print(trader.deals)             # 当天成交
-        #print(trader.cancelable)        # 可撤委托
-        print(trader.market_value)
-        print(trader.entrustment)        # 当日委托（可撤委托，已成委托，已撤销委托）
-        #print(trader.bingo)             # 注意只兼容部分券商！
-        limit = '510160', '0.557', '100'
-        trader.sell(*limit)
-        #trader.cancel_order('000001', 'cancel')  # 取代cancel()方法。
-        trader.cancel_buy()
+
+    print('{}\nPython version: {}'.format(platform.platform(), platform.python_version()))
+    华泰 = {
+        'account_no': None,
+        'password': None,
+        'comm_pwd': None
+    }
+
+    海通 = {
+        'account_no': '12345678',
+        'password': '666666',
+        'comm_pwd': '666666'
+    }
+
+    #t = Puppet(title='广发证券核新网上交易系统7.60')
+    t = Puppet()
+    t.login(海通).wait(2).exit().login(华泰).balance # 先登录海通，等2秒钟，退出，马上登录华泰查看余额
+    #t.cancel_order('000001', 'cancel')  # 取代cancel()方法。
