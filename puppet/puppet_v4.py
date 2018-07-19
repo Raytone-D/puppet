@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.5"
+__version__ = "0.5.1"
 __license__ = 'MIT'
 
 import ctypes
@@ -132,7 +132,6 @@ class Puppet:
         for i in range(retry):
             time.sleep(delay) # important
             self._root = kwargs.get('root') or user32.FindWindowW(0, self.title)
-            print(i, self._root)
             self.visible = user32.IsWindowVisible(self._root)
             if self.visible:
                 print('木偶："正在热身..."')
@@ -179,7 +178,6 @@ class Puppet:
                     if user32.IsWindowVisible(committer):
                         self._label = label
                         self.broker = LOGIN[label]
-                        print(committer)
                         print('找到了{}证券客户端登录窗口'.format(self.broker))
                         break
                 break
@@ -210,7 +208,6 @@ class Puppet:
                 if class_name == 'Edit':
                     try:
                         text = next(lparam)
-                        print(text)
                         self.fill(handle, text)
                     except:
                         ret = False
