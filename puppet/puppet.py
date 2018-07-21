@@ -14,7 +14,6 @@ import platform
 from functools import reduce
 from collections import OrderedDict
 
-
 try:
     import pyperclip
 except Exception as e:
@@ -30,7 +29,7 @@ MSG = {'WM_SETTEXT': 12,
        'CB_GETCOUNT': 326,
        'CB_SETCURSEL': 334,
        'CBN_SELCHANGE': 1,
-       'COPY_DATA': 57634}
+       'COPY': 57634}
 
 INIT = {'买入': 161, '卖出': 162, '撤单': 163}
 
@@ -270,7 +269,7 @@ class Puppet:
             self.switch_tab(self.two_way, key)
         for i in range(10):
             time.sleep(0.3)
-            user32.SendMessageW(hCtrl, MSG['WM_COMMAND'], MSG['COPY_DATA'], NODE['FORM'][-1])
+            user32.SendMessageW(hCtrl, MSG['WM_COMMAND'], MSG['COPY'], NODE['FORM'][-1])
             ret = pyperclip.paste().splitlines()
             if len(ret) > 1:
                 break
