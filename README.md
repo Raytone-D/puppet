@@ -24,29 +24,45 @@ puppet扯线木偶目前仅适用于独立交易端核新版(即THS)，需配合
 **已实现的登录方法：**
 
 login()         登录客户端
+
 exit()          关闭客户端
 
 **已实现的交易方法：**
 
 send_order()    双向委托，【限价】委托下单，未实现【市价】委托。
+
 buy()           【限价】买入，未实现【市价】委托。
+
 sell()          【限价】卖出，未实现【市价】委托。
+
 cancel_order()  撤单
+
 cancel_all()    全撤
+
 cancel_buy()    撤买
+
 cancel_sell()   撤卖
+
 raffle()        新股申购
 
 **已实现的查询功能：**
 
 account         登录账号
+
 balance         可用余额
+
 position        持仓列表
+
 market_value    持仓市值
+
 cancelable      可撤委托
+
 entrustment     当日委托
+
 deals           当日成交
+
 new             当日新股
+
 bingo           中签查询，部分券商可查。
 
 
@@ -55,13 +71,19 @@ bingo           中签查询，部分券商可查。
 import puppet as api
 
 p = api.Puppet()
+
 p.login(account_no='你的账号', password='你的交易密码', comm_pwd='你的通讯密码') # 登录客户端
 
 p.account                       # 查看当前登录的账号
+
 p.balance                       # 查看当前账户可用余额
+
 p.market_value                  # 当前账号的实时市值
+
 p.buy('000001', '9.32', '100')  # 限价委托，在[9.32]这个价位买入[100股][平安银行]，注意是str类型
+
 p.entrustment                   # 查看上述委托是否受理或成交了。
+
 p.cancel_buy()                  # 撤销当前全部买单
 
 
