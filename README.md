@@ -1,4 +1,4 @@
-『扯线木偶』Puppet traderAPI)
+『扯线木偶』Puppet traderAPI
 ==
 
 实现交易接口，突破交易桎梏！
@@ -6,16 +6,19 @@
 实现了和股票交易客户端相同的【买卖撤查】功能。暂不支持【融资融券】交易功能。
 --
 
-puppet扯线木偶目前仅适用于独立交易端核新版(即THS)，需配合交易框架(hikyuu, quantaxis, rqalpha, vnpy, etc)使用。**
+puppet扯线木偶目前仅适用于独立交易端核新版(即THS)，需配合交易框架(hikyuu, quantaxis, rqalpha, vnpy, etc)使用。
 -
-墙裂推荐使用实盘易，一站式量化交易解决方案 https://www.iguuu.com/e 。**
+墙裂推荐使用实盘易，一站式量化交易解决方案 http://www.iguuu.com/e?x=19829 。**
 -
 
 **未实现的功能：**
 
 【验证码】登录
+
 【市价】委托
+
 【逆回购】
+
 【基金盘后业务】
 
 **已实现的登录方法：**
@@ -65,7 +68,6 @@ p.cancel_buy()                  # 撤销当前全部买单
 **使用环境：**
 
 1、同花顺 股票交易客户端，留意【部分最新】版本不能复制持仓或委托数据。推荐备用版本: https://pan.baidu.com/s/1radY1fI 密码: m9db
---
 
 1、要求用Python3.4及以上，强烈推荐用于科学计算的Python发行版【Anaconda3】的【最新】版本。
 
