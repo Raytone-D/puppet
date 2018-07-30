@@ -5,12 +5,11 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.5.1"
+__version__ = "0.5.2"
 __license__ = 'MIT'
 
 import ctypes
 import time
-import platform
 from functools import reduce
 from collections import OrderedDict
 
@@ -65,13 +64,6 @@ NEW = {'新股代码': 1032,
        '申购数量': 1034,
        '申购': 1006}
 
-PATH = r'D:\Utils\海通证券委托\xiadan.exe'
-
-LOGIN = {
-    '连当前站点': '海通',
-    '确定': '华泰'
-}
-
 RAFFLE = ['新股代码', '证券代码', '申购价格']# , '申购上限']
 
 VKCODE = {'F1': 112,
@@ -108,17 +100,11 @@ def kill_popup(hDlg, name='是(&Y)'):
 
 
 class Puppet:
-    """
-    界面自动化操控包装类
-    # 方法 # '委买': buy(), '委卖': sell(), '撤单': cancel(), '打新': raffle(),
-    # 属性 # '帐号': account, '可用余额': balance, '持仓': position, '成交': deals, '可撤委托': cancelable, 
-    #      # '新股': new, '中签': bingo, 
-    """
     buf_length = 32
 
     def __init__(self, title='网上股票交易系统5.0', main=None, **kwrags):
 
-        print('Puppet TraderApi, version {}'.format(__version__))
+        print('Puppet TraderApi, version {}\n'.format(__version__))
         self._buf = ctypes.create_unicode_buffer(32)
         self.title = title
         self.life = 0
@@ -148,7 +134,7 @@ class Puppet:
                 self.life += 1
                 print('木偶："我准备好了"')
                 break
-        print("cost:", time.time() - start)
+        print("init cost: %s\n" % (time.time() - start))
 
     def wait(self, delay=1):
         time.sleep(delay)
@@ -157,32 +143,42 @@ class Puppet:
     def run(self, client_path):
         start = time.time()
         import subprocess
+        print('客户端路径', client_path)
         assert 'xiadan' in client_path and subprocess.os.path.isfile(client_path), '客户端路径错误'
         print('{} 正在尝试运行客户端...'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start))))
         subprocess.Popen(client_path, shell=True)
         self.path = client_path
 
-        print("cost:", time.time() - start)
+        print("run cost:", time.time() - start)
 
     def init_login(self, retry=10):
         start = time.time()
+        self.broker = None
 
         for i in range(retry):
             time.sleep(0.5) # important
             self._hLogin = user32.FindWindowExW(None, None, '#32770', '用户登录')
             visible = user32.IsWindowVisible(self._hLogin) # 登录窗口可见, 2s+
             if visible:
-                for label in LOGIN.keys():
-                    committer = user32.FindWindowExW(self._hLogin, None, 'Button', label)
-                    if user32.IsWindowVisible(committer):
-                        self._label = label
-                        self.broker = LOGIN[label]
-                        print('找到了{}证券客户端登录窗口'.format(self.broker))
-                        break
+                break
+        for i in range(10):
+            time.sleep(0.5)
+            LOGIN = {
+                '连当前站点': '海通',
+                '确定(&Y)': '华泰'
+            }
+            for label in LOGIN.keys():
+                committer = user32.FindWindowExW(self._hLogin, None, 'Button', label)
+                if user32.IsWindowVisible(committer):
+                    self._label = label
+                    self.broker = LOGIN[label]
+                    print('找到了{}证券客户端登录窗口'.format(self.broker))
+                    break
+            if self.broker:
                 break
 
         time.sleep(1) # important
-        print("cost:", time.time() - start)
+        print("init login cost:", time.time() - start)
         assert visible, '客户端没有运行或者找不到名为「{}」的窗口'.format('用户登录')
         assert committer, '提交按钮标识错误'
         #self._running = True
@@ -193,7 +189,7 @@ class Puppet:
             password: 交易密码, str
             comm_pwd: 通讯密码, str
         """
-        self.run(client_path or PATH)
+        self.run(client_path)
         self.init_login()
         start = time.time()
         print('{} 正在尝试登入交易服务器...'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start))))
@@ -462,21 +458,24 @@ class Puppet:
 
 
 if __name__ == '__main__':
+    import platform
+    print('\n{}\nPython Version: {}'.format(platform.platform(), platform.python_version()))
+    htai = {
+        'account_no': '666622xxxxxx',
+        'password': '123456',
+        'comm_pwd': '12345678',
+        'client_path': r'D:\Utils\htwt\xiadan.exe'
+    } # 华泰
 
-    print('{}\nPython version: {}'.format(platform.platform(), platform.python_version()))
-    华泰 = {
-        'account_no': None,
-        'password': None,
-        'comm_pwd': None
-    }
-
-    海通 = {
+    htong = {
         'account_no': '12345678',
         'password': '666666',
-        'comm_pwd': '666666'
-    }
+        'comm_pwd': '666666',
+        'client_path': r'D:\Utils\htong\xiadan.exe'
+    } # 海通
 
     #t = Puppet(title='广发证券核新网上交易系统7.60')
     t = Puppet()
-    t.login(海通).wait(2).exit().login(华泰).balance # 先登录海通，等2秒钟，退出，马上登录华泰查看余额
+    t.login(**htai)
+    #t.login(htong).wait(2).exit().login(htai).balance # 先登录海通，等2秒钟，退出，马上登录华泰查看余额
     #t.cancel_order('000001', 'cancel')  # 取代cancel()方法。
