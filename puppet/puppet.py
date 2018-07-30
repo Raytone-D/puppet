@@ -69,7 +69,6 @@ class Puppet:
         'buy': 161,
         'sell': 162,
         'cancel_order': 163,
-        'cancelable': 163,
         'trade': 512,
         'entrustment': 168,
         'new':554,
@@ -113,8 +112,7 @@ class Puppet:
                 self.switch('trade')
                 time.sleep(0.5)
 
-                self.two_way = reduce(user32.GetDlgItem, self.PAGE, self.root)
-                self.members = {k: user32.GetDlgItem(self.two_way, v) for k, v in TWO_WAY.items()}
+                self.members = {k: user32.GetDlgItem(self._container['trade'], v) for k, v in TWO_WAY.items()}
                 self._position = reduce(user32.GetDlgItem, self.PATH['table'], self.root)
                 self.life += 1
                 print('木偶："我准备好了"')
@@ -213,7 +211,13 @@ class Puppet:
         return self
 
     def switch(self, name=None): #root=None):
-        node = self.NODE.get(name, 512)
+        node = {
+            'account': 512,
+            'balance': 512,
+            'position': 512,
+            'deals': 512,
+            'cancelable': 163
+        }.get(name) or self.NODE.get(name)
         print('page', name, node)
         #if isinstance(root, int):
         #    self.root = root
@@ -254,7 +258,7 @@ class Puppet:
         start = time.time()
         if key:
             self.switch('trade')  # 激活对话框窗口，保证正常切换到成交和委托控件。
-            self.switch_tab(self.two_way, key)
+            self.switch_tab(self._container['trade'], key)
         for i in range(10):
             time.sleep(0.3)
             user32.SendMessageW(hCtrl, MSG['WM_COMMAND'], MSG['COPY'], NODE['FORM'][-1])
@@ -302,7 +306,7 @@ class Puppet:
         user32.SendMessageW(self.members['买入数量'], MSG['WM_SETTEXT'], 0, str(qty))
         #user32.SendMessageW(self.members['买入'], MSG['BM_CLICK'], 0, 0)
         time.sleep(sec)
-        user32.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['买入'], 0)
+        user32.PostMessageW(self._container['trade'], MSG['WM_COMMAND'], TWO_WAY['买入'], 0)
 
     def sell2(self, symbol, price, qty, sec=0.3):    # 卖出(S)
         user32.SendMessageW(self.members['卖出代码'], MSG['WM_SETTEXT'], 0, str(symbol))
@@ -312,10 +316,10 @@ class Puppet:
         user32.SendMessageW(self.members['卖出数量'], MSG['WM_SETTEXT'], 0, str(qty))
         #user32.SendMessageW(self.members['卖出'], MSG['BM_CLICK'], 0, 0)
         time.sleep(sec)
-        user32.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['卖出'], 0)
+        user32.PostMessageW(self._container['trade'], MSG['WM_COMMAND'], TWO_WAY['卖出'], 0)
 
     def refresh(self):    # 刷新(F5)
-        user32.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['刷新'], 0)
+        user32.PostMessageW(self._container['trade'], MSG['WM_COMMAND'], TWO_WAY['刷新'], 0)
 
     def cancel_order(self, symbol=None, choice='cancel_all', symbolid=3348, nMarket=None, orderId=None):
         """撤销订单，choice选择操作的结果，默认“cancel_all”，可选“cancel_buy”、“cancel_sell”或"cancel"
