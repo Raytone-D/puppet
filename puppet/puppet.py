@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.5.2"
+__version__ = "0.5.3"
 __license__ = 'MIT'
 
 import ctypes
@@ -74,29 +74,6 @@ VKCODE = {'F1': 112,
           'F6': 117}
 
 user32 = ctypes.windll.user32
-
-def switch_combo(index, idCombo, hCombo):
-    user32.SendMessageW(hCombo, MSG['CB_SETCURSEL'], index, 0)
-    user32.SendMessageW(user32.GetParent(hCombo), MSG['WM_COMMAND'], MSG['CBN_SELCHANGE']<<16|idCombo, hCombo)
-
-def click_button(dialog, label):
-    handle = user32.FindWindowExW(dialog, 0, 0, label)
-    id_btn = user32.GetDlgCtrlID(handle)
-    user32.PostMessageW(dialog, MSG['WM_COMMAND'], id_btn, 0)
-
-def fill_in(container, _id_item, _str):
-    user32.SendDlgItemMessageW(container, _id_item, MSG['WM_SETTEXT'], 0, _str)
-
-def kill_popup(hDlg, name='是(&Y)'):
-    for x in range(100):
-        time.sleep(0.01)
-        popup = user32.GetLastActivePopup(hDlg)
-        if popup != hDlg and user32.IsWindowVisible(popup):
-            yes = user32.FindWindowExW(popup, 0, 0, name)
-            idYes = user32.GetDlgCtrlID(yes)
-            user32.PostMessageW(popup, MSG['WM_COMMAND'], idYes, 0)
-            print('popup has killed.')
-            break
 
 
 class Puppet:
@@ -242,7 +219,7 @@ class Puppet:
         for i in range(5):
             handle = user32.GetLastActivePopup(self.root)
             if handle:
-                click_button(handle, button_label)
+                self.click_button(handle, button_label)
                 return 1
             time.sleep(delay)
 
@@ -288,14 +265,14 @@ class Puppet:
 
     def _order(self, container, id_items, *triple):
         #self.switch(NODE['BUY'][0]
-        fill_in(container, id_items[0], triple[0])  # 证券代码
+        self.fill_in(container, id_items[0], triple[0])  # 证券代码
         self._wait(container, id_items[-2])  # 证券名称
-        fill_in(container, id_items[1], triple[1])  # 价格
+        self.fill_in(container, id_items[1], triple[1])  # 价格
         self._wait(container, id_items[-1])  # 可用数量
-        fill_in(container, id_items[2], triple[2])  # 数量
-        click_button(container, id_items[3])  # 下单按钮
+        self.fill_in(container, id_items[2], triple[2])  # 数量
+        self.click_button(container, id_items[3])  # 下单按钮
         if len(str(triple[1]).split('.')[1]) == 3:  # 基金三位小数价格弹窗
-            kill_popup(self._root)
+            self.kill_popup(self._root)
 
     def buy(self, symbol, price, qty):
         self._order(self._container['买入'], NODE['BUY'], symbol, price, qty)
@@ -335,10 +312,10 @@ class Puppet:
         """
         hDlg = self._container['撤单']
         if symbol:
-            fill_in(hDlg, symbolid, symbol)
+            self.fill_in(hDlg, symbolid, symbol)
             for i in range(10):
                 time.sleep(0.3)
-                click_button(hDlg, '查询代码')
+                self.click_button(hDlg, '查询代码')
                 hButton = user32.FindWindowExW(hDlg, 0, 0, '撤单')
                 # 撤单按钮的状态检查
                 if user32.IsWindowEnabled(hButton):
@@ -349,7 +326,7 @@ class Puppet:
             'cancel_sell': '撤卖(C)',
             'cancel': '撤单'
         }
-        click_button(hDlg, cases.get(choice))
+        self.click_button(hDlg, cases.get(choice))
 
     @property
     def account(self):
@@ -455,6 +432,29 @@ class Puppet:
 
         #user32.SendMessageW(self._root, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
         return [new for new in self.cancelable if '配售申购' in new['操作']]
+
+    def switch_combo(self, index, idCombo, hCombo):
+        user32.SendMessageW(hCombo, MSG['CB_SETCURSEL'], index, 0)
+        user32.SendMessageW(user32.GetParent(hCombo), MSG['WM_COMMAND'], MSG['CBN_SELCHANGE']<<16|idCombo, hCombo)
+
+    def click_button(self, dialog, label):
+        handle = user32.FindWindowExW(dialog, 0, 0, label)
+        id_btn = user32.GetDlgCtrlID(handle)
+        user32.PostMessageW(dialog, MSG['WM_COMMAND'], id_btn, 0)
+
+    def fill_in(self, container, _id_item, _str):
+        user32.SendDlgItemMessageW(container, _id_item, MSG['WM_SETTEXT'], 0, _str)
+
+    def kill_popup(self, hDlg, name='是(&Y)'):
+        for x in range(100):
+            time.sleep(0.01)
+            popup = user32.GetLastActivePopup(hDlg)
+            if popup != hDlg and user32.IsWindowVisible(popup):
+                yes = user32.FindWindowExW(popup, 0, 0, name)
+                idYes = user32.GetDlgCtrlID(yes)
+                user32.PostMessageW(popup, MSG['WM_COMMAND'], idYes, 0)
+                print('popup has killed.')
+                break
 
 
 if __name__ == '__main__':
