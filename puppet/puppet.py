@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.5.4"
+__version__ = "0.5.5"
 __license__ = 'MIT'
 
 import ctypes
@@ -71,7 +71,7 @@ class Puppet:
         'cancel_order': 163,
         'trade': 512,
         'entrustment': 168,
-        'new':554,
+        'raffle':554,
         'bingo': 1070
     }
     PAGE = 59648, 59649
@@ -105,21 +105,16 @@ class Puppet:
             if self.visible:
                 print('木偶："正在热身..."')
                 #self.close_popup(delay=0.1) # 关闭"自动升级提示"弹窗
-                self._position, self._cancelable, self._entrustment = None, None, None
                 user32.ShowOwnedPopups(self.root, False)
 
                 self._container = {name: self._get_item(name) for name in self.NODE.keys()}
-                self.switch('trade')
-                time.sleep(0.5)
-
                 self.members = {k: user32.GetDlgItem(self._container['trade'], v) for k, v in TWO_WAY.items()}
-                self._position = reduce(user32.GetDlgItem, self.PATH['table'], self.root)
                 self.life += 1
                 print('木偶："我准备好了"')
                 break
         print("init cost: %s\n" % (time.time() - start))
 
-    def wait(self, delay=1):
+    def wait(self, delay=0.5):
         time.sleep(delay)
         return self
 
@@ -216,6 +211,7 @@ class Puppet:
             'balance': 512,
             'position': 512,
             'deals': 512,
+            'new': 554,
             'cancelable': 163
         }.get(name) or self.NODE.get(name)
         print('page', name, node)
@@ -252,16 +248,32 @@ class Puppet:
         time.sleep(0.1)
         user32.PostMessageW(hCtrl, MSG['WM_KEYUP'], keyCode, param)
 
-    def copy_data(self, hCtrl, key=0):
+    def query(self, category):
+        self.switch(category)
+        key = {
+            'position': ord('W'),
+            'deals': ord('E')
+        }.get(category)
+        if key:
+            self.switch_tab(self._container['trade'], key)
+        name = {
+            'position': 'trade',
+            'deals': 'trade',
+            'cancelable': 'cancel_order',
+            'new': 'raffle'
+        }.get(category) or category
+        handle = reduce(user32.GetDlgItem, self.PATH['table'], self._container[name])
+        print(category, handle)
+        return self.wait().copy_data(handle)
+
+    def copy_data(self, hCtrl):
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板"
         _replace = {'参考市值': '市值', '最新市值': '市值'}  # 兼容国金/平安"最新市值"、银河“参考市值”。
         start = time.time()
-        if key:
-            self.switch('trade')  # 激活对话框窗口，保证正常切换到成交和委托控件。
-            self.switch_tab(self._container['trade'], key)
+
         for i in range(10):
             time.sleep(0.3)
-            user32.SendMessageW(hCtrl, MSG['WM_COMMAND'], MSG['COPY'], NODE['FORM'][-1])
+            user32.SendMessageW(hCtrl, MSG['WM_COMMAND'], MSG['COPY'], 0)
             ret = pyperclip.paste().splitlines()
             if len(ret) > 1:
                 break
@@ -352,46 +364,33 @@ class Puppet:
     @property
     def balance(self):
         self.switch('trade')
-        self.refresh()
         user32.SendMessageW(self.members['可用余额'], MSG['WM_GETTEXT'], 32, self._buf)
         return float(self._buf.value)
 
     @property
     def position(self):
-        return self.copy_data(self._position, ord('W'))
+        return self.query('position')
 
     @property
     def market_value(self):
         ret = self.position
-        return sum((float(pair['市值']) for pair in ret)) if ret else 0.0
+        return sum(float(pair.get('市值', 0)) for pair in ret)
 
     @property
     def deals(self):
-        return self.copy_data(self._position, ord('E'))
+        return self.query('deals')
 
     @property
     def entrustment(self):
-        if not self._entrustment:
-            self.switch('entrustment')
-            self._entrustment = reduce(user32.GetDlgItem, NODE['FORM'], self.root)
-
-        return self.copy_data(self._entrustment)
+        return self.query('entrustment')
 
     @property
     def cancelable(self):
-        if not self._cancelable:
-            self.switch('cancelable')
-            self._cancelable = reduce(user32.GetDlgItem, NODE['FORM'], self.root)
-        return self.copy_data(self._cancelable)
-        #ret = self.entrustment
-        #return [pair for pair in ret if '已报' in pair['备注']] if ret else ret
+        return self.query('cancelable')
 
     @property
     def new(self):
-        self.switch('new')
-        time.sleep(0.5)
-        self._new = reduce(user32.GetDlgItem, NODE['FORM'], self.root)
-        return self.copy_data(self._new)
+        return self.query('new')
 
     @property
     def bingo(self):
@@ -400,10 +399,7 @@ class Puppet:
         except Exception as e:
             print(e, "\n该券商的中签查询未经测试，注意复查。")
 
-        self.switch('bingo')
-        time.sleep(0.5)
-        self._bingo = reduce(user32.GetDlgItem, NODE['FORM'], self.root)
-        return self.copy_data(self._bingo)
+        return self.query('bingo')
 
     def cancel_all(self):  # 全撤
         self.cancel_order()
@@ -418,12 +414,12 @@ class Puppet:
         #user32.SendMessageW(self.root, MSG['WM_COMMAND'], NODE['新股申购'], 0)
         #self._raffle = reduce(user32.GetDlgItem, NODE['FORM'], self.root)
         #close_pop()    # 弹窗无需关闭，不影响交易。
-        #schedule = self.copy_data(self._raffle)
+        #schedule = self.query(self._raffle)
         ret = self.new
         if not ret:
             print("是日无新!")
             return ret
-        self._raffle = reduce(user32.GetDlgItem, NODE['FRAME'], self.root)
+        self._raffle = reduce(user32.GetDlgItem, self.PATH['table'], self._container['raffle'])
         self._raffle_parts = {k: user32.GetDlgItem(self._raffle, v) for k, v in NEW.items()}
             #new = [x.split() for x in schedule.splitlines()]
             #index = [new[0].index(x) for x in RAFFLE if x in new[0]]    # 索引映射：代码0, 价格1, 数量2
