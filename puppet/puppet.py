@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.5.3"
+__version__ = "0.5.4"
 __license__ = 'MIT'
 
 import ctypes
@@ -30,20 +30,7 @@ MSG = {'WM_SETTEXT': 12,
        'CBN_SELCHANGE': 1,
        'COPY': 57634}
 
-INIT = {'买入': 161, '卖出': 162, '撤单': 163}
-
-NODE = {'FRAME': (59648, 59649),
-        'FORM': (59648, 59649, 1047, 200, 1047),
-        'ACCOUNT': (59392, 0, 1711),
-        'COMBO': (59392, 0, 2322),
-        'BUY': (1032, 1033, 1034, '买入[B]', 1036, 1018),
-        'SELL':(1032, 1033, 1034, '卖出[S]', 1036, 1038),
-        'CANCEL': (3348, '查询代码', '撤单'),
-        'ENTRUSTMENT': 168,
-        '撤单': 163,
-        '双向委托': 512,
-        '新股申购': 554,
-        '中签查询': 1070}
+#        'COMBO': (59392, 0, 2322),
 
 TWO_WAY = {'买入代码': 1032,
            '买入价格': 1033,
@@ -77,6 +64,27 @@ user32 = ctypes.windll.user32
 
 
 class Puppet:
+
+    NODE = {
+        'buy': 161,
+        'sell': 162,
+        'cancel_order': 163,
+        'cancelable': 163,
+        'trade': 512,
+        'entrustment': 168,
+        'new':554,
+        'bingo': 1070
+    }
+    PAGE = 59648, 59649
+    PATH = {
+        'account': (59392, 0, 1711),
+        'balance': (1038,),
+        'table': (1047, 200, 1047),
+        'buy': (1032, 1033, 1034, '买入[B]', 1036, 1018),
+        'sell':(1032, 1033, 1034, '卖出[S]', 1036, 1038),
+        'cancel_order': (3348, '查询代码', '撤单')
+    }
+
     buf_length = 32
 
     def __init__(self, title='网上股票交易系统5.0', main=None, **kwrags):
@@ -93,21 +101,21 @@ class Puppet:
         delay = 0 if retry <=1 else 1
         for i in range(retry):
             time.sleep(delay) # important
-            self._root = kwargs.get('root') or user32.FindWindowW(0, self.title)
-            self.visible = user32.IsWindowVisible(self._root)
+            self.root = kwargs.get('root') or user32.FindWindowW(0, self.title)
+            self.visible = user32.IsWindowVisible(self.root)
             if self.visible:
                 print('木偶："正在热身..."')
                 #self.close_popup(delay=0.1) # 关闭"自动升级提示"弹窗
                 self._position, self._cancelable, self._entrustment = None, None, None
-                user32.ShowOwnedPopups(self._root, False)
+                user32.ShowOwnedPopups(self.root, False)
 
-                self._container = {label: self._get_item(_id) for label, _id in INIT.items()}
-                self.switch(NODE['双向委托'])
+                self._container = {name: self._get_item(name) for name in self.NODE.keys()}
+                self.switch('trade')
                 time.sleep(0.5)
 
-                self.two_way = reduce(user32.GetDlgItem, NODE['FRAME'], self._root)
+                self.two_way = reduce(user32.GetDlgItem, self.PAGE, self.root)
                 self.members = {k: user32.GetDlgItem(self.two_way, v) for k, v in TWO_WAY.items()}
-                self._position = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
+                self._position = reduce(user32.GetDlgItem, self.PATH['table'], self.root)
                 self.life += 1
                 print('木偶："我准备好了"')
                 break
@@ -200,11 +208,18 @@ class Puppet:
     def exit(self):
         "退出系统并关闭程序"
         assert self.life, "客户端没有登录"
-        user32.PostMessageW(self._root, MSG['WM_CLOSE'], 0, 0)
+        user32.PostMessageW(self.root, MSG['WM_CLOSE'], 0, 0)
         self.life = 0
         return self
 
-    def switch(self, node): user32.SendMessageW(self._root, MSG['WM_COMMAND'], node, 0)
+    def switch(self, name=None): #root=None):
+        node = self.NODE.get(name, 512)
+        print('page', name, node)
+        #if isinstance(root, int):
+        #    self.root = root
+        assert user32.IsWindowVisible(self.root), "客户端已关闭或账户已登出"
+        assert user32.SendMessageW(self.root, MSG['WM_COMMAND'], node, 0)
+        return self
 
     def fill(self, editor, text):
         "fill in"
@@ -223,10 +238,10 @@ class Puppet:
                 return 1
             time.sleep(delay)
 
-    def _get_item(self, _id, sec=0.5):
-        self.switch(_id)
+    def _get_item(self, name, sec=0.5):
+        self.switch(name)
         time.sleep(sec)
-        return reduce(user32.GetDlgItem, NODE['FRAME'], self._root)
+        return reduce(user32.GetDlgItem, self.PAGE, self.root)
 
     def switch_tab(self, hCtrl, keyCode, param=0):   # 单击
         user32.PostMessageW(hCtrl, MSG['WM_KEYDOWN'], keyCode, param)
@@ -238,7 +253,7 @@ class Puppet:
         _replace = {'参考市值': '市值', '最新市值': '市值'}  # 兼容国金/平安"最新市值"、银河“参考市值”。
         start = time.time()
         if key:
-            self.switch(NODE['双向委托'])  # 激活对话框窗口，保证正常切换到成交和委托控件。
+            self.switch('trade')  # 激活对话框窗口，保证正常切换到成交和委托控件。
             self.switch_tab(self.two_way, key)
         for i in range(10):
             time.sleep(0.3)
@@ -264,7 +279,6 @@ class Puppet:
                 break
 
     def _order(self, container, id_items, *triple):
-        #self.switch(NODE['BUY'][0]
         self.fill_in(container, id_items[0], triple[0])  # 证券代码
         self._wait(container, id_items[-2])  # 证券名称
         self.fill_in(container, id_items[1], triple[1])  # 价格
@@ -272,17 +286,15 @@ class Puppet:
         self.fill_in(container, id_items[2], triple[2])  # 数量
         self.click_button(container, id_items[3])  # 下单按钮
         if len(str(triple[1]).split('.')[1]) == 3:  # 基金三位小数价格弹窗
-            self.kill_popup(self._root)
+            self.kill_popup(self.root)
 
     def buy(self, symbol, price, qty):
-        self._order(self._container['买入'], NODE['BUY'], symbol, price, qty)
+        self._order(self._container['buy'], self.NODE['buy'], symbol, price, qty)
 
     def sell(self, symbol, price, qty):
-        #self.switch(NODE['SELL'][0])
-        self._order(self._container['卖出'], NODE['SELL'], symbol, price, qty)
+        self._order(self._container['sell'], self.NODE['sell'], symbol, price, qty)
 
     def buy2(self, symbol, price, qty, sec=0.3):   # 买入(B)
-        #self.switch(NODE['双向委托'])
         user32.SendMessageW(self.members['买入代码'], MSG['WM_SETTEXT'], 0, str(symbol))
         time.sleep(0.1)
         user32.SendMessageW(self.members['买入价格'], MSG['WM_SETTEXT'], 0, str(price))
@@ -293,7 +305,6 @@ class Puppet:
         user32.PostMessageW(self.two_way, MSG['WM_COMMAND'], TWO_WAY['买入'], 0)
 
     def sell2(self, symbol, price, qty, sec=0.3):    # 卖出(S)
-        #self.switch(NODE['双向委托'])
         user32.SendMessageW(self.members['卖出代码'], MSG['WM_SETTEXT'], 0, str(symbol))
         time.sleep(0.1)
         user32.SendMessageW(self.members['卖出价格'], MSG['WM_SETTEXT'], 0, str(price))
@@ -310,7 +321,7 @@ class Puppet:
         """撤销订单，choice选择操作的结果，默认“cancel_all”，可选“cancel_buy”、“cancel_sell”或"cancel"
             "cancel"是撤销指定股票symbol的全部委托。
         """
-        hDlg = self._container['撤单']
+        hDlg = self._container['cancel_order']
         if symbol:
             self.fill_in(hDlg, symbolid, symbol)
             for i in range(10):
@@ -330,13 +341,13 @@ class Puppet:
 
     @property
     def account(self):
-        handle = reduce(user32.GetDlgItem, NODE['ACCOUNT'], self._root)
+        handle = reduce(user32.GetDlgItem, NODE['ACCOUNT'], self.root)
         user32.SendMessageW(handle, MSG['WM_GETTEXT'], 32, self._buf)
         return self._buf.value
 
     @property
     def balance(self):
-        self.switch(NODE['双向委托'])
+        self.switch('trade')
         self.refresh()
         user32.SendMessageW(self.members['可用余额'], MSG['WM_GETTEXT'], 32, self._buf)
         return float(self._buf.value)
@@ -357,25 +368,25 @@ class Puppet:
     @property
     def entrustment(self):
         if not self._entrustment:
-            self.switch(NODE['ENTRUSTMENT'])
-            self._entrustment = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
+            self.switch('entrustment')
+            self._entrustment = reduce(user32.GetDlgItem, NODE['FORM'], self.root)
 
         return self.copy_data(self._entrustment)
 
     @property
     def cancelable(self):
         if not self._cancelable:
-            self.switch(NODE['撤单'])
-            self._cancelable = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
+            self.switch('cancelable')
+            self._cancelable = reduce(user32.GetDlgItem, NODE['FORM'], self.root)
         return self.copy_data(self._cancelable)
         #ret = self.entrustment
         #return [pair for pair in ret if '已报' in pair['备注']] if ret else ret
 
     @property
     def new(self):
-        self.switch(NODE['新股申购'])
+        self.switch('new')
         time.sleep(0.5)
-        self._new = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
+        self._new = reduce(user32.GetDlgItem, NODE['FORM'], self.root)
         return self.copy_data(self._new)
 
     @property
@@ -385,9 +396,9 @@ class Puppet:
         except Exception as e:
             print(e, "\n该券商的中签查询未经测试，注意复查。")
 
-        self.switch(NODE['中签查询'])
+        self.switch('bingo')
         time.sleep(0.5)
-        self._bingo = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
+        self._bingo = reduce(user32.GetDlgItem, NODE['FORM'], self.root)
         return self.copy_data(self._bingo)
 
     def cancel_all(self):  # 全撤
@@ -400,15 +411,15 @@ class Puppet:
         self.cancel_order(choice='cancel_sell')
 
     def raffle(self, skip=False):    # 打新
-        #user32.SendMessageW(self._root, MSG['WM_COMMAND'], NODE['新股申购'], 0)
-        #self._raffle = reduce(user32.GetDlgItem, NODE['FORM'], self._root)
+        #user32.SendMessageW(self.root, MSG['WM_COMMAND'], NODE['新股申购'], 0)
+        #self._raffle = reduce(user32.GetDlgItem, NODE['FORM'], self.root)
         #close_pop()    # 弹窗无需关闭，不影响交易。
         #schedule = self.copy_data(self._raffle)
         ret = self.new
         if not ret:
             print("是日无新!")
             return ret
-        self._raffle = reduce(user32.GetDlgItem, NODE['FRAME'], self._root)
+        self._raffle = reduce(user32.GetDlgItem, NODE['FRAME'], self.root)
         self._raffle_parts = {k: user32.GetDlgItem(self._raffle, v) for k, v in NEW.items()}
             #new = [x.split() for x in schedule.splitlines()]
             #index = [new[0].index(x) for x in RAFFLE if x in new[0]]    # 索引映射：代码0, 价格1, 数量2
@@ -430,7 +441,7 @@ class Puppet:
             time.sleep(0.3)
             user32.PostMessageW(self._raffle, MSG['WM_COMMAND'], NEW['申购'], 0)
 
-        #user32.SendMessageW(self._root, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
+        #user32.SendMessageW(self.root, MSG['WM_COMMAND'], NODE['双向委托'], 0)    # 切换到交易操作台
         return [new for new in self.cancelable if '配售申购' in new['操作']]
 
     def switch_combo(self, index, idCombo, hCombo):
