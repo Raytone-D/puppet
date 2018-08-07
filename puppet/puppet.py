@@ -5,11 +5,12 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.5.5"
+__version__ = "0.5.6"
 __license__ = 'MIT'
 
 import ctypes
 import time
+import io
 from functools import reduce
 from collections import OrderedDict
 
@@ -143,7 +144,7 @@ class Puppet:
             time.sleep(0.5)
             LOGIN = {
                 '连当前站点': '海通',
-                '确定(&Y)': '华泰'
+                '确定(&Y)': '华泰(广发)'
             }
             for label in LOGIN.keys():
                 committer = user32.FindWindowExW(self._hLogin, None, 'Button', label)
@@ -161,7 +162,7 @@ class Puppet:
         assert committer, '提交按钮标识错误'
         #self._running = True
 
-    def login(self, account_no=None, password=None, comm_pwd=None, client_path=None, retry=10, **kwargs):
+    def login(self, account_no=None, password=None, comm_pwd=None, client_path=None, retry=10, ocr=None, **kwargs):
         """ 重新登录或切换账户
             account_no: 账号, str
             password: 交易密码, str
@@ -186,8 +187,10 @@ class Puppet:
                         ret = False
             return ret
 
-        lparam = [account_no, password, comm_pwd]
         #assert all(lparam), '用户登录参数不全'
+        if comm_pwd is None or comm_pwd == '':
+            comm_pwd = self.verify(self.grab(), ocr)
+        lparam = [account_no, password, comm_pwd]
         lparam = iter(lparam)
         user32.EnumChildWindows(self._hLogin, match, None)
         time.sleep(0.5) # important
@@ -197,6 +200,26 @@ class Puppet:
         self.visible = False
         self.init(retry)
         return self
+
+    def grab(self):
+        from PIL import ImageGrab
+
+        buf = io.BytesIO()
+        rect = ctypes.wintypes.RECT()
+        hImage = user32.FindWindowExW(self._hLogin, None, 'Static', "")
+        user32.GetWindowRect(hImage, ctypes.byref(rect))
+        screenshot = ImageGrab.grab((rect.left, rect.top, rect.right, rect.bottom))
+        screenshot.save(buf, 'png')
+        return buf.getvalue()
+
+    def verify(self, image, ocr):
+        try:
+            from aip import AipOcr
+        except Exception as e:
+            print('e \n请在命令行下执行: pip install baidu-aip')
+
+        client = AipOcr(**ocr)
+        return client.basicGeneral(image).get('words_result')[0]['words']
 
     def exit(self):
         "退出系统并关闭程序"
@@ -357,7 +380,7 @@ class Puppet:
 
     @property
     def account(self):
-        handle = reduce(user32.GetDlgItem, NODE['ACCOUNT'], self.root)
+        handle = reduce(user32.GetDlgItem, self.PATH['account'], self.root)
         user32.SendMessageW(handle, MSG['WM_GETTEXT'], 32, self._buf)
         return self._buf.value
 
@@ -471,12 +494,12 @@ class Puppet:
 if __name__ == '__main__':
     import platform
     print('\n{}\nPython Version: {}'.format(platform.platform(), platform.python_version()))
-    htai = {
+    gf = {
         'account_no': '666622xxxxxx',
         'password': '123456',
-        'comm_pwd': '12345678',
-        'client_path': r'D:\Utils\htwt\xiadan.exe'
-    } # 华泰
+        'comm_pwd': '',
+        'client_path': r'D:\Utils\gfwt\xiadan.exe'
+    } # 广发
 
     htong = {
         'account_no': '12345678',
@@ -485,8 +508,16 @@ if __name__ == '__main__':
         'client_path': r'D:\Utils\htong\xiadan.exe'
     } # 海通
 
+    bdy = {
+        'appId': '',
+        'apiKey': '',
+        'secretKey': ''
+    } # 百度云 OCR https://cloud.baidu.com/product/ocr
+
     #t = Puppet(title='广发证券核新网上交易系统7.60')
+    # 广发(标题为"广发证券核新网上交易系统7.65")拷贝数据会弹窗阻止。
+
     t = Puppet()
-    t.login(**htai)
+    t.login(**gf, ocr=bdy)
     #t.login(htong).wait(2).exit().login(htai).balance # 先登录海通，等2秒钟，退出，马上登录华泰查看余额
     #t.cancel_order('000001', 'cancel')  # 取代cancel()方法。
