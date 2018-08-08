@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.5.6"
+__version__ = "0.5.7"
 __license__ = 'MIT'
 
 import ctypes
@@ -201,24 +201,30 @@ class Puppet:
         self.init(retry)
         return self
 
-    def grab(self):
+    def grab(self, hParent=None):
         from PIL import ImageGrab
 
         buf = io.BytesIO()
         rect = ctypes.wintypes.RECT()
-        hImage = user32.FindWindowExW(self._hLogin, None, 'Static', "")
+        hImage = user32.FindWindowExW(hParent or self._hLogin, None, 'Static', "")
         user32.GetWindowRect(hImage, ctypes.byref(rect))
-        screenshot = ImageGrab.grab((rect.left, rect.top, rect.right, rect.bottom))
+        screenshot = ImageGrab.grab((rect.left, rect.top, rect.right*1.33, rect.bottom))
         screenshot.save(buf, 'png')
         return buf.getvalue()
 
-    def verify(self, image, ocr):
+    def verify(self, image, ocr=None):
         try:
             from aip import AipOcr
         except Exception as e:
             print('e \n请在命令行下执行: pip install baidu-aip')
 
-        client = AipOcr(**ocr)
+        conf = ocr or {
+            'appId': '11645803',
+            'apiKey': 'RUcxdYj0mnvrohEz6MrEERqz',
+            'secretKey': '4zRiYambxQPD1Z5HFh9VOoPXPK9AgBtZ'
+        }
+
+        client = AipOcr(**conf)
         return client.basicGeneral(image).get('words_result')[0]['words']
 
     def exit(self):
@@ -247,11 +253,13 @@ class Puppet:
     def fill(self, editor, text):
         "fill in"
         user32.SendMessageW(editor, MSG['WM_SETTEXT'], 0, text)
+        return self
 
     def commit(self, leader, label='确定'):
         committer = user32.FindWindowExW(leader, 0, 'Button', label)
         idCommitter = user32.GetDlgCtrlID(committer)
         user32.PostMessageW(leader, MSG['WM_COMMAND'], idCommitter, 0)
+        return self
 
     def close_popup(self, button_label='以后再说', delay=0.5):
         for i in range(5):
@@ -292,21 +300,20 @@ class Puppet:
     def copy_data(self, hCtrl):
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板"
         _replace = {'参考市值': '市值', '最新市值': '市值'}  # 兼容国金/平安"最新市值"、银河“参考市值”。
-        start = time.time()
+        user32.SendMessageTimeoutW(hCtrl, MSG['WM_COMMAND'], MSG['COPY'], 0, 1, 100)
+        handle = user32.GetLastActivePopup(self.root)
+        if handle != self.root:
+            text = self.verify(self.grab(handle))
+            hEdit = user32.FindWindowExW(handle, None, 'Edit', "")
+            self.fill(hEdit, text).wait(0.1).commit(handle)
 
-        for i in range(10):
-            time.sleep(0.3)
-            user32.SendMessageW(hCtrl, MSG['WM_COMMAND'], MSG['COPY'], 0)
-            ret = pyperclip.paste().splitlines()
-            if len(ret) > 1:
-                break
+        ret = pyperclip.paste().splitlines()
         temp = (x.split('\t') for x in ret)
         header = next(temp)
         for tag, value in _replace.items():
             if tag in header:
                 header.insert(header.index(tag), value)
                 header.remove(tag)
-        print('it take {} loop, {} seconds.'.format(i, time.time() - start))
         return [OrderedDict(zip(header, x)) for x in temp]
 
     def _wait(self, container, id_item):
@@ -518,6 +525,6 @@ if __name__ == '__main__':
     # 广发(标题为"广发证券核新网上交易系统7.65")拷贝数据会弹窗阻止。
 
     t = Puppet()
-    t.login(**gf, ocr=bdy)
+    t.login(**gf)
     #t.login(htong).wait(2).exit().login(htai).balance # 先登录海通，等2秒钟，退出，马上登录华泰查看余额
     #t.cancel_order('000001', 'cancel')  # 取代cancel()方法。
