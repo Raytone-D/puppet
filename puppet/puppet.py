@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.5.7"
+__version__ = "0.5.8"
 __license__ = 'MIT'
 
 import ctypes
@@ -92,6 +92,7 @@ class Puppet:
         print('Puppet TraderApi, version {}\n'.format(__version__))
         self._buf = ctypes.create_unicode_buffer(32)
         self.title = title
+        self.root = None
         self.life = 0
         self.init(root=main)
 
@@ -101,7 +102,8 @@ class Puppet:
         delay = 0 if retry <=1 else 1
         for i in range(retry):
             time.sleep(delay) # important
-            self.root = kwargs.get('root') or user32.FindWindowW(0, self.title)
+            if not self.root:
+                self.root = kwargs.get('root') or user32.FindWindowW(0, self.title)
             self.visible = user32.IsWindowVisible(self.root)
             if self.visible:
                 print('木偶："正在热身..."')
@@ -133,13 +135,25 @@ class Puppet:
     def init_login(self, retry=10):
         start = time.time()
         self.broker = None
-
+        import psutil
+        pid = ctypes.c_ulong()
+        dlg = None
         for i in range(retry):
             time.sleep(0.5) # important
-            self._hLogin = user32.FindWindowExW(None, None, '#32770', '用户登录')
-            visible = user32.IsWindowVisible(self._hLogin) # 登录窗口可见, 2s+
-            if visible:
+            gen = psutil.process_iter()
+            procs = {p.pid: p.exe() for p in gen if p.name() == 'xiadan.exe'}
+            hLogin = user32.FindWindowExW(dlg, None, '#32770', '用户登录')
+            visible = user32.IsWindowVisible(hLogin) # 登录窗口可见, 2s+
+            ctypes.windll.user32.GetWindowThreadProcessId(hLogin, ctypes.byref(pid))
+            print(procs, pid.value)
+            if visible and procs.get(pid.value) == self.path:
+                user32.SetForegroundWindow(hLogin)
+                self.root = user32.GetParent(hLogin)
+                self._hLogin = hLogin
                 break
+            else:
+                dlg = hLogin
+
         for i in range(10):
             time.sleep(0.5)
             LOGIN = {
@@ -300,12 +314,14 @@ class Puppet:
     def copy_data(self, hCtrl):
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板"
         _replace = {'参考市值': '市值', '最新市值': '市值'}  # 兼容国金/平安"最新市值"、银河“参考市值”。
-        user32.SendMessageTimeoutW(hCtrl, MSG['WM_COMMAND'], MSG['COPY'], 0, 1, 100)
+        pyperclip.copy('nan')
+        user32.SendMessageTimeoutW(hCtrl, MSG['WM_COMMAND'], MSG['COPY'], 0, 1, 500)
         handle = user32.GetLastActivePopup(self.root)
         if handle != self.root:
+            user32.SetForegroundWindow(handle)
             text = self.verify(self.grab(handle))
             hEdit = user32.FindWindowExW(handle, None, 'Edit', "")
-            self.fill(hEdit, text).wait(0.1).commit(handle)
+            self.fill(hEdit, text).wait(0.1).commit(handle).wait()
 
         ret = pyperclip.paste().splitlines()
         temp = (x.split('\t') for x in ret)
@@ -393,7 +409,7 @@ class Puppet:
 
     @property
     def balance(self):
-        self.switch('trade')
+        self.switch('balance')
         user32.SendMessageW(self.members['可用余额'], MSG['WM_GETTEXT'], 32, self._buf)
         return float(self._buf.value)
 
@@ -496,6 +512,9 @@ class Puppet:
                 user32.PostMessageW(popup, MSG['WM_COMMAND'], idYes, 0)
                 print('popup has killed.')
                 break
+
+    def status(self):
+        return user32.IsWindowVisible(self.root)
 
 
 if __name__ == '__main__':
