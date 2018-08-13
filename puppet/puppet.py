@@ -5,12 +5,13 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.5.8"
+__version__ = "0.5.9"
 __license__ = 'MIT'
 
 import ctypes
 import time
 import io
+import subprocess
 from functools import reduce
 from collections import OrderedDict
 
@@ -87,110 +88,79 @@ class Puppet:
 
     buf_length = 32
 
-    def __init__(self, title='网上股票交易系统5.0', main=None, **kwrags):
-
+    def __init__(self, title='网上股票交易系统5.0', main=None, **kwargs):
         print('Puppet TraderApi, version {}\n'.format(__version__))
+
+        self.start = time.time()
         self._buf = ctypes.create_unicode_buffer(32)
-        self.title = title
-        self.root = None
-        self.life = 0
-        self.init(root=main)
+        self.root = main
+        self.init(title)
 
-    def init(self, retry=1, **kwargs):
-        start = time.time()
+    def init(self, title=None, retry=1):
+        self.root = self.root or user32.FindWindowW(0, title)
+        if self.visible():
+            print('木偶："正在热身，请稍候..."\n')
+            user32.ShowOwnedPopups(self.root, False)
+            #self.close_popup(delay=0.1) # 关闭"自动升级提示"弹窗
+            self._container = {name: self._get_item(name) for name in self.NODE.keys()}
+            self.members = {k: user32.GetDlgItem(self._container['trade'], v) for k, v in TWO_WAY.items()}
 
-        delay = 0 if retry <=1 else 1
-        for i in range(retry):
-            time.sleep(delay) # important
-            if not self.root:
-                self.root = kwargs.get('root') or user32.FindWindowW(0, self.title)
-            self.visible = user32.IsWindowVisible(self.root)
-            if self.visible:
-                print('木偶："正在热身..."')
-                #self.close_popup(delay=0.1) # 关闭"自动升级提示"弹窗
-                user32.ShowOwnedPopups(self.root, False)
-
-                self._container = {name: self._get_item(name) for name in self.NODE.keys()}
-                self.members = {k: user32.GetDlgItem(self._container['trade'], v) for k, v in TWO_WAY.items()}
-                self.life += 1
-                print('木偶："我准备好了"')
-                break
-        print("init cost: %s\n" % (time.time() - start))
-
-    def wait(self, delay=0.5):
-        time.sleep(delay)
-        return self
+            print('木偶："我准备好了"\n')
+            print("cost: %s\n" % (time.time() - self.start))
 
     def run(self, client_path):
-        start = time.time()
-        import subprocess
-        print('客户端路径', client_path)
         assert 'xiadan' in client_path and subprocess.os.path.isfile(client_path), '客户端路径错误'
-        print('{} 正在尝试运行客户端...'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start))))
-        subprocess.Popen(client_path, shell=True)
-        self.path = client_path
+        print('{} 正在尝试运行客户端({})...'.format(time.strftime('%Y-%m-%d %H:%M:%S %a'), client_path))
 
-        print("run cost:", time.time() - start)
-
-    def init_login(self, retry=10):
-        start = time.time()
-        self.broker = None
-        import psutil
+        BUTTON = {
+            '连当前站点': '海通',
+            '确定(&Y)': '华泰(广发)'
+        }
+        self.pid = subprocess.Popen(client_path).pid
         pid = ctypes.c_ulong()
         dlg = None
-        for i in range(retry):
-            time.sleep(0.5) # important
-            gen = psutil.process_iter()
-            procs = {p.pid: p.exe() for p in gen if p.name() == 'xiadan.exe'}
+        for i in range(9):
+            self.wait() # important
             hLogin = user32.FindWindowExW(dlg, None, '#32770', '用户登录')
-            visible = user32.IsWindowVisible(hLogin) # 登录窗口可见, 2s+
-            ctypes.windll.user32.GetWindowThreadProcessId(hLogin, ctypes.byref(pid))
-            print(procs, pid.value)
-            if visible and procs.get(pid.value) == self.path:
-                user32.SetForegroundWindow(hLogin)
-                self.root = user32.GetParent(hLogin)
-                self._hLogin = hLogin
+            tid = user32.GetWindowThreadProcessId(hLogin, ctypes.byref(pid))
+            #print(pid, self.pid)
+            if pid.value == self.pid and self.visible(hLogin):
+                self.wait()
+                for label, value in BUTTON.items():
+                    hButton = user32.FindWindowExW(hLogin, None, 'Button', label)
+                    if self.visible(hButton):
+                        break
                 break
             else:
                 dlg = hLogin
 
-        for i in range(10):
-            time.sleep(0.5)
-            LOGIN = {
-                '连当前站点': '海通',
-                '确定(&Y)': '华泰(广发)'
-            }
-            for label in LOGIN.keys():
-                committer = user32.FindWindowExW(self._hLogin, None, 'Button', label)
-                if user32.IsWindowVisible(committer):
-                    self._label = label
-                    self.broker = LOGIN[label]
-                    print('找到了{}证券客户端登录窗口'.format(self.broker))
-                    break
-            if self.broker:
-                break
+        assert hLogin, '客户端没有运行或者找不到用户登录窗口'
+        assert hButton, '提交按钮标识错误'
 
-        time.sleep(1) # important
-        print("init login cost:", time.time() - start)
-        assert visible, '客户端没有运行或者找不到名为「{}」的窗口'.format('用户登录')
-        assert committer, '提交按钮标识错误'
-        #self._running = True
+        self.root = user32.GetParent(hLogin)
+        self._hLogin = hLogin
+        user32.GetWindowTextW(self.root, self._buf, 32)
+        self.title = self._buf.value
+        self.path = client_path
+        self._label = label
+        self.broker = value
+        #self.wait(1) # important
 
-    def login(self, account_no=None, password=None, comm_pwd=None, client_path=None, retry=10, ocr=None, **kwargs):
+        print("cost:", time.time() - self.start)
+
+    def login(self, account_no=None, password=None, comm_pwd=None, client_path=None, ocr=None, **kwargs):
         """ 重新登录或切换账户
             account_no: 账号, str
             password: 交易密码, str
             comm_pwd: 通讯密码, str
         """
         self.run(client_path)
-        self.init_login()
-        start = time.time()
-        print('{} 正在尝试登入交易服务器...'.format(time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(start))))
+        print('\n{} 正在尝试登入交易服务器...'.format(time.strftime('%Y-%m-%d %H:%M:%S %a')))
 
         @ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, ctypes.c_wchar_p)
         def match(handle, args):
             ret = True
-            if user32.IsWindowVisible(handle):
+            if self.visible(handle):
                 user32.GetClassNameW(handle, self._buf, self.buf_length)
                 class_name = self._buf.value
                 if class_name == 'Edit':
@@ -201,18 +171,26 @@ class Puppet:
                         ret = False
             return ret
 
-        #assert all(lparam), '用户登录参数不全'
-        if comm_pwd is None or comm_pwd == '':
+        if not comm_pwd:
             comm_pwd = self.verify(self.grab(), ocr)
         lparam = [account_no, password, comm_pwd]
+        assert all(lparam), '用户登录参数不全'
         lparam = iter(lparam)
         user32.EnumChildWindows(self._hLogin, match, None)
-        time.sleep(0.5) # important
-        self.commit(self._hLogin, self._label)
-        print("cost:", time.time() - start)
+        self.wait().commit(self._hLogin, self._label)
 
-        self.visible = False
-        self.init(retry)
+        for i in range(9):
+            self.wait(1)
+            if self.visible():
+                print("{} 已登入交易服务器。".format(time.strftime('%Y-%m-%d %H:%M:%S %a')))
+                print('cost:', time.time() - self.start)
+                break
+
+        self.init()
+        return self
+
+    def wait(self, delay=0.5):
+        time.sleep(delay)
         return self
 
     def grab(self, hParent=None):
@@ -222,6 +200,7 @@ class Puppet:
         rect = ctypes.wintypes.RECT()
         hImage = user32.FindWindowExW(hParent or self._hLogin, None, 'Static', "")
         user32.GetWindowRect(hImage, ctypes.byref(rect))
+        user32.SetForegroundWindow(hParent or self._hLogin)
         screenshot = ImageGrab.grab((rect.left, rect.top, rect.right*1.33, rect.bottom))
         screenshot.save(buf, 'png')
         return buf.getvalue()
@@ -243,9 +222,8 @@ class Puppet:
 
     def exit(self):
         "退出系统并关闭程序"
-        assert self.life, "客户端没有登录"
+        assert self.visible(), "客户端没有登录"
         user32.PostMessageW(self.root, MSG['WM_CLOSE'], 0, 0)
-        self.life = 0
         return self
 
     def switch(self, name=None): #root=None):
@@ -260,7 +238,7 @@ class Puppet:
         print('page', name, node)
         #if isinstance(root, int):
         #    self.root = root
-        assert user32.IsWindowVisible(self.root), "客户端已关闭或账户已登出"
+        assert self.visible(), "客户端已关闭或账户已登出"
         assert user32.SendMessageW(self.root, MSG['WM_COMMAND'], node, 0)
         return self
 
@@ -315,13 +293,17 @@ class Puppet:
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板"
         _replace = {'参考市值': '市值', '最新市值': '市值'}  # 兼容国金/平安"最新市值"、银河“参考市值”。
         pyperclip.copy('nan')
-        user32.SendMessageTimeoutW(hCtrl, MSG['WM_COMMAND'], MSG['COPY'], 0, 1, 500)
+        user32.SendMessageTimeoutW(hCtrl, MSG['WM_COMMAND'], MSG['COPY'], 0, 1, 300)
+
         handle = user32.GetLastActivePopup(self.root)
         if handle != self.root:
-            user32.SetForegroundWindow(handle)
-            text = self.verify(self.grab(handle))
-            hEdit = user32.FindWindowExW(handle, None, 'Edit', "")
-            self.fill(hEdit, text).wait(0.1).commit(handle).wait()
+            for i in range(9):
+                self.wait(0.3)
+                if self.visible(handle):
+                    text = self.verify(self.grab(handle))
+                    hEdit = user32.FindWindowExW(handle, None, 'Edit', "")
+                    self.fill(hEdit, text).wait(0.1).commit(handle).wait(0.1)
+                    break
 
         ret = pyperclip.paste().splitlines()
         temp = (x.split('\t') for x in ret)
@@ -513,8 +495,8 @@ class Puppet:
                 print('popup has killed.')
                 break
 
-    def status(self):
-        return user32.IsWindowVisible(self.root)
+    def visible(self, hwnd=None):
+        return user32.IsWindowVisible(hwnd or self.root)
 
 
 if __name__ == '__main__':
