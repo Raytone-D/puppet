@@ -36,6 +36,7 @@ if __name__ == '__main__':
         '余额:%s\n' % bot.balance,
         '持仓市值:%s\n' % bot.market_value)
 
-    bot.cancel_order('000001', 'cancel')
+    bot.buy('000001', '9.33', '100')
+    bot.wait(2).cancel('000001')
     print('退出客户端...')
     bot.exit()
