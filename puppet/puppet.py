@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.6.0"
+__version__ = "0.6.1"
 __license__ = 'MIT'
 
 import ctypes
@@ -80,8 +80,8 @@ class Puppet:
         'account': (59392, 0, 1711),
         'balance': (1038,),
         'table': (1047, 200, 1047),
-        'buy2': (1032, 1033, 1034),
-        'sell2':(1035, 1058, 1039),
+        'buy2': (3451, 1032, 1033, 1034),
+        'sell2':(3453, 1035, 1058, 1039),
         'cancel_order': (3348,)
     }
     PAGE = 59648, 59649
@@ -347,7 +347,7 @@ class Puppet:
         symbol, price, qty, action, way, *other = args
         self.members = self.excute(action)
         label = {'buy2': '买入[B]', 'sell2': '卖出[S]'}.get(action)
-        self.fill(symbol).wait().fill(price).fill(qty).wait(0.2).click_button(label=label)
+        self.switch_mkt(symbol).fill(symbol).wait(.3).fill(price).fill(qty).wait(0.2).click_button(label=label).if_fund(price)
         return self
 
     def buy(self, symbol, price, qty, action='buy2', way='limited'):
@@ -489,6 +489,18 @@ class Puppet:
 
     def refresh(self):
         user32.PostMessageW(self._container['trade'], MSG['WM_COMMAND'], TWO_WAY['刷新'], 0)
+
+    def switch_mkt(self, symbol):
+        "0: SH, 1: SZ; '5'沪基金, '6'沪A, '9'沪B"
+        handle = next(self.members)
+        index = 0 if symbol.startswith(('6', '5')) else 1
+        user32.SendMessageW(handle, MSG['CB_SETCURSEL'], index, 0)
+        user32.SendMessageW(user32.GetParent(handle), MSG['WM_COMMAND'], MSG['CBN_SELCHANGE']<<16|user32.GetDlgCtrlID(handle), handle)
+        return self
+
+    def if_fund(self, symbol):
+        if len(symbol.split('.')[1]) == 3:
+            self.capture()
 
 
 if __name__ == '__main__':
