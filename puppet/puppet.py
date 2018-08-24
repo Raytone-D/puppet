@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.6.1"
+__version__ = "0.6.2"
 __license__ = 'MIT'
 
 import ctypes
@@ -159,8 +159,12 @@ class Puppet:
             if self.visible(handle):
                 user32.GetClassNameW(handle, buf, 32)
                 if buf.value == 'Edit':
+                    try:
                         text = next(lparam)
                         self.fill(text, handle).wait(0.1)
+                    except:
+                        #print('登录信息填写完毕')
+                        return False
             return True
 
         buf = ctypes.create_unicode_buffer(32)
@@ -194,7 +198,7 @@ class Puppet:
         hImage = user32.FindWindowExW(hParent or self.hLogin, None, 'Static', "")
         user32.GetWindowRect(hImage, ctypes.byref(rect))
         user32.SetForegroundWindow(hParent or self.hLogin)
-        screenshot = ImageGrab.grab((rect.left, rect.top, rect.right*1.33, rect.bottom))
+        screenshot = ImageGrab.grab((rect.left, rect.top, rect.right+(rect.right-rect.left)*0.33, rect.bottom))
         screenshot.save(buf, 'png')
         return buf.getvalue()
 
@@ -211,7 +215,10 @@ class Puppet:
         }
 
         client = AipOcr(**conf)
-        return client.basicGeneral(image).get('words_result')[0]['words']
+        try:
+            return client.basicGeneral(image).get('words_result')[0]['words']
+        except Exception as e:
+            raise Exception('e \n验证码图片无法识别！')
 
     def exit(self):
         "退出系统并关闭程序"
@@ -274,7 +281,7 @@ class Puppet:
                 if self.visible(handle):
                     text = self.verify(self.grab(handle))
                     hEdit = user32.FindWindowExW(handle, None, 'Edit', "")
-                    self.fill(hEdit, text).wait(0.1).click_button(handle).wait(0.1)
+                    self.fill(text, hEdit).click_button(handle).wait(0.3) # have to wait!
                     break
 
         ret = pyperclip.paste().splitlines()
@@ -501,6 +508,9 @@ class Puppet:
     def if_fund(self, symbol):
         if len(symbol.split('.')[1]) == 3:
             self.capture()
+
+    def summary(self):
+        return var(self)
 
 
 if __name__ == '__main__':
