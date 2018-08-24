@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.6.2"
+__version__ = "0.6.3"
 __license__ = 'MIT'
 
 import ctypes
@@ -510,7 +510,7 @@ class Puppet:
             self.capture()
 
     def summary(self):
-        return var(self)
+        return vars(self)
 
 
 if __name__ == '__main__':
