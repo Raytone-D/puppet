@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.6.4"
+__version__ = "0.6.5"
 __license__ = 'MIT'
 
 import ctypes
@@ -65,6 +65,9 @@ VKCODE = {'F1': 112,
 
 user32 = ctypes.windll.user32
 
+def login(account_no, password, comm_pwd, client_path):
+    return Puppet().login(account_no, password, comm_pwd, client_path)
+
 
 class Puppet:
 
@@ -90,19 +93,17 @@ class Puppet:
 
     def __init__(self, argument='网上股票交易系统5.0'):
         """
-            :argument: 客户端标题或客户端主句柄, str or int
+            :argument: 客户端标题或客户端根句柄, str or int, 为了兼容已登录的单个客户端。
         """
         self.type = 'THS'
-        self.birthtime = time.ctime()
-        self.set_root(argument) # 兼容单客户端
-        #self.init()
-
+        self.bind(argument)
 
     "Login API"
 
     def run(self, exe_path):
-        assert 'xiadan' in subprocess.os.path.basename(exe_path).split('.')[0] and subprocess.os.path.exists(exe_path), '客户端路径错误'
-        print('{} 正在尝试运行客户端({})...'.format(time.strftime('%Y-%m-%d %H:%M:%S %a'), exe_path))
+        assert 'xiadan' in subprocess.os.path.basename(exe_path).split('.')\
+            and subprocess.os.path.exists(exe_path), '客户端路径("%s")错误' % exe_path
+        print('{} 正在尝试运行客户端("{}")...'.format(time.strftime('%Y-%m-%d %H:%M:%S %a'), exe_path))
 
         self.pid = subprocess.Popen(exe_path).pid
         pid = ctypes.c_ulong()
@@ -123,15 +124,13 @@ class Puppet:
         self.title = self.text(self.root)
         self.path = exe_path
 
-        print("cost:", time.time() - self.start)
-
     def login(self, account_no=None, password=None, comm_pwd=None, client_path=None, ocr=None, **kwargs):
         """ 重新登录或切换账户
             account_no: 账号, str
             password: 交易密码, str
             comm_pwd: 通讯密码, str
         """
-        self.start = time.time()
+        start = time.time()
         self.run(client_path)
         print('\n{} 正在尝试登入交易服务器...'.format(time.strftime('%Y-%m-%d %H:%M:%S %a')))
 
@@ -162,8 +161,10 @@ class Puppet:
             if '暂停登录' in res:
                 raise Exception("%s \n木偶: '交易服务器维护，暂停登录，请稍后再试！'" % res)
             if self.visible():
+                self.birthtime = time.ctime()
+                self.elapsed  = time.time() - start
+                print('耗时:', self.elapsed )
                 print("{} 已登入交易服务器。".format(time.strftime('%Y-%m-%d %H:%M:%S %a')))
-                print('cost:', time.time() - self.start)
                 break
 
         return self.init()
@@ -317,7 +318,9 @@ class Puppet:
     def __repr__(self):
         return "<ver: %s type: %s birthtime: %s>" % (__version__, self.type, self.birthtime)
 
-    def set_root(self, str_or_int):
+    def bind(self, str_or_int):
+        "绑定交易客户端根句柄"
+        self.birthtime = time.ctime()
         self.root = user32.FindWindowW(0, str_or_int) if isinstance(str_or_int, str) else str_or_int
         self.title = self.text(self.root)
         self.init()
