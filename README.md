@@ -13,8 +13,6 @@ puppet扯线木偶目前仅适用于独立交易端核新版(即THS)，需配合
 
 **未实现的功能：**
 
-【市价】委托
-
 【逆回购】
 
 【基金盘后业务】
@@ -27,11 +25,13 @@ exit()          关闭客户端
 
 **已实现的交易方法：**
 
-send_order()    双向委托，【限价】委托下单，未实现【市价】委托。
+trade()          双向委托，【限价】或【市价】委托。
 
-buy()           【限价】买入，未实现【市价】委托。
+buy()           【限价】或【市价】买入。
 
-sell()          【限价】卖出，未实现【市价】委托。
+sell()          【限价】或【市价】卖出。
+
+cancel()        撤单
 
 cancel_order()  撤单
 
@@ -68,21 +68,21 @@ bingo           中签查询，部分券商可查。
 
 import puppet as api
 
-p = api.Puppet()
+quant = api.Client()
 
-p.login(account_no='你的账号', password='你的交易密码', comm_pwd='你的通讯密码') # 登录客户端
+quant.login(account_no='你的账号', password='你的交易密码', comm_pwd='你的通讯密码') # 登录客户端
 
-p.account                       # 查看当前登录的账号
+quant.account                       # 查看当前登录的账号
 
-p.balance                       # 查看当前账户可用余额
+quant.balance                       # 查看当前账户可用余额
 
-p.market_value                  # 当前账号的实时市值
+quant.market_value                  # 当前账号的实时市值
 
-p.buy('000001', '9.32', '100')  # 限价委托，在[9.32]这个价位买入[100股][平安银行]，注意是str类型
+quant.buy('000001', '9.32', '100')  # 限价委托，在[9.32]这个价位买入[100股][平安银行]，注意是str类型
 
-p.entrustment                   # 查看上述委托是否受理或成交了。
+quant.entrustment                   # 查看上述委托是否受理或成交了。
 
-p.cancel_buy()                  # 撤销当前全部买单
+quant.cancel_buy()                  # 撤销当前全部买单
 
 
 **使用环境：**
