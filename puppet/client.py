@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.7.0"
+__version__ = "0.7.1"
 __license__ = 'MIT'
 
 import ctypes
@@ -52,17 +52,19 @@ class Client:
         'balance': 512,
         'position': 512,
         'deals': 512,
+        'asset': 165,
         'new': 554,
-        'raffle':554,
+        'raffle': 554,
         'batch': 5170,
         'bingo': 1070
     }
     MEMBERS = {
         'account': (59392, 0, 1711),
         'balance': (1038,),
+        'asset': (1015,),
         'table': (1047, 200, 1047),
-        'buy2': (3451, 1032, 1541, 1033, 1018, 1034), # 交易市场|证券代码|委托策略|买入价格|可买|买入数量
-        'sell2':(3453, 1035, 1542, 1058, 1019, 1039),
+        'buy2': (3451, 1032, 1541, 1033, 1018, 1034),  # 交易市场|证券代码|委托策略|买入价格|可买|买入数量
+        'sell2': (3453, 1035, 1542, 1058, 1019, 1039),
         'cancel_order': (3348,)
     }
     PAGE = 59648, 59649
@@ -97,7 +99,7 @@ class Client:
         pid = ctypes.c_ulong()
         dlg = None
         for i in range(60):
-            self.wait() # have to
+            self.wait()  # have to
             hLogin = user32.FindWindowExW(dlg, None, '#32770', '用户登录')
             tid = user32.GetWindowThreadProcessId(hLogin, ctypes.byref(pid))
             if pid.value == self.pid:
@@ -158,7 +160,7 @@ class Client:
                 self.birthtime = time.ctime()
                 self.acc = account_no
                 self.title = self.text(self.root)
-                self.elapsed  = time.time() - start
+                self.elapsed = time.time() - start
                 print("{} 已登入交易服务器。".format(time.strftime('%Y-%m-%d %H:%M:%S %a')))
                 # print('耗时:', self.elapsed )
                 return self.init()
@@ -175,22 +177,24 @@ class Client:
 
     def trade(self, action, symbol, arg, qty):
         """下单
-        :action: 交易方向, str, "buy2"或"sell2", 'margin'
-        :symbol: 证券代码, str; 例如'000001'
-        :arg: 委托价格('float'或float)或委托策略(0<int<=5), 例如'3.32', 3.32, 1
-        :qty: 委托数量, int或"int", 例如100, '100'
-            委托策略
+        :action: str, 交易方式; "buy2"或"sell2", 'margin'
+        :symbol: str, 证券代码; 例如'000001'
+        :arg: float or str of float, 判断为委托价格，int判断为委托策略, 例如'3.32', 3.32, 1
+        :qty: int or str of int, 委托数量, 例如100, '100'
+            委托策略(注意个别券商自定义索引)
             0 LIMIT              限价委托 沪深
-            1 BEST5_OR_CANCEL    最优五档即时成交剩余撤销 沪深
+            1 BEST5_OR_CANCEL    最优五档即时成交剩余撤销 上海
             2 BEST5_OR_LIMIT     最优五档即时成交剩余转限价 上海
-            2 REVERSE_BEST_LIMIT 对方最优价格 深圳
-            3 FORWARD_BEST       本方最优价格 深圳
-            4 BEST_OR_CANCEL     即时成交剩余撤销 深圳
+            1 REVERSE_BEST_LIMIT 对方最优价格 深圳
+            2 FORWARD_BEST       本方最优价格 深圳
+            3 BEST_OR_CANCEL     即时成交剩余撤销 深圳
+            4 BEST5_OR_CANCEL    最优五档即时成交剩余撤销 深圳
             5 ALL_OR_CANCEL      全额成交或撤销 深圳
         """
         label = {'buy2': '买入[B]', 'sell2': '卖出[S]'}.get(action)
         self.members = self.excute(action)
-        full = self.switch_mkt(symbol).fill(symbol).wait(.3).switch_way(arg).fill(arg)._text()
+        price = None if isinstance(arg, int) else arg
+        full = self.switch_mkt(symbol).fill(symbol).wait(.3).switch_way(arg).fill(price)._text()
         self.fill(qty if qty else full).click_button(label=label).if_fund(symbol, arg)
         return self
 
@@ -208,26 +212,26 @@ class Client:
             :choice: str, 可选“cancel_buy”、“cancel_sell”或"cancel", "cancel"是撤销指定股票symbol的全部委托。
         """
         editor, hDialog = self.excute('cancel_order')
-        self.wait() # have to
+        self.wait()  # have to
         if isinstance(symbol, str):
             self.fill(symbol, editor)
             for i in range(10):
                 self.wait(0.3).click_button(hDialog, label='查询代码')
                 hButton = user32.FindWindowExW(hDialog, 0, 'Button', '撤单')
-                if user32.IsWindowEnabled(hButton): # 撤单按钮的状态检查
+                if user32.IsWindowEnabled(hButton):  # 撤单按钮的状态检查
                     break
         return self.click_button(hDialog, label={'cancel': '撤单',
                                                  'cancel_all': '全撤(Z /)',
                                                  'cancel_buy': '撤买(X)',
                                                  'cancel_sell': '撤卖(C)'}[choice]).answer()
 
-    def cancel_all(self): # 全撤
+    def cancel_all(self):  # 全撤
         return self.cancel_order()
 
-    def cancel_buy(self): # 撤买
+    def cancel_buy(self):  # 撤买
         return self.cancel_order(choice='cancel_buy')
 
-    def cancel_sell(self): # 撤卖
+    def cancel_sell(self):  # 撤卖
         return self.cancel_order(choice='cancel_sell')
 
     def raffle(self):
@@ -261,6 +265,12 @@ class Client:
     def account(self):
         handle = self.excute('account')
         return self._text(handle)
+
+    @property
+    def assets(self):
+        self.members = self.excute('asset')
+        self.wait()
+        return float(self._text())
 
     @property
     def balance(self):
@@ -346,7 +356,7 @@ class Client:
                 if self.visible(handle):
                     text = self.verify(self.grab(handle))
                     hEdit = user32.FindWindowExW(handle, None, 'Edit', "")
-                    self.fill(text, hEdit).click_button(handle).wait(0.3) # have to wait!
+                    self.fill(text, hEdit).click_button(handle).wait(0.3)  # have to wait!
                     break
 
         ret = pyperclip.paste().splitlines()
@@ -396,7 +406,7 @@ class Client:
     def fill(self, text, editor=None, hParent=None, idEditor=None):
         "fill in"
         hEdit = editor or next(self.members)
-        if text not in (1, 2, 3, 4, 5):
+        if text:
             text = str(text)
             if hParent and idEditor:
                 r = user32.SendDlgItemMessageW(hParent, idEditor, MSG['WM_SETTEXT'], 0, text)
@@ -429,7 +439,7 @@ class Client:
         hImage = user32.FindWindowExW(hParent or self.hLogin, None, 'Static', "")
         user32.GetWindowRect(hImage, ctypes.byref(rect))
         user32.SetForegroundWindow(hParent or self.hLogin)
-        screenshot = ImageGrab.grab((rect.left, rect.top, rect.right+(rect.right-rect.left)*0.33, rect.bottom))
+        screenshot = ImageGrab.grab((rect.left, rect.top, rect.right + (rect.right - rect.left) * 0.33, rect.bottom))
         screenshot.save(buf, 'png')
         return buf.getvalue()
 
