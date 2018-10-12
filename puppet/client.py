@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.7.1"
+__version__ = "0.7.2"
 __license__ = 'MIT'
 
 import ctypes
@@ -134,7 +134,7 @@ class Client:
                     try:
                         text = next(lparam)
                         self.fill(text, handle).wait(0.1)
-                    except:
+                    except Exception as e:
                         #print('登录信息填写完毕')
                         return False
             return True
@@ -170,8 +170,8 @@ class Client:
         "退出系统并关闭程序"
         assert self.visible(), "客户端没有登录"
         user32.PostMessageW(self.root, MSG['WM_CLOSE'], 0, 0)
+        print("已退出客户端!")
         return self
-
 
     "Trade API"
 
@@ -494,8 +494,8 @@ class Client:
         handle = hCombo or next(self.members)
         user32.SendMessageW(handle, MSG['CB_SETCURSEL'], index if isinstance(index, int) else 0, 0)
         r = user32.SendMessageW(user32.GetParent(handle), MSG['WM_COMMAND'],
-            MSG['CBN_SELCHANGE']<<16|user32.GetDlgCtrlID(handle), handle)
-        return self# if r else False
+            MSG['CBN_SELCHANGE'] << 16 | user32.GetDlgCtrlID(handle), handle)
+        return self  # if r else False
 
     def switch_mkt(self, symbol):
         """:mkt: 0: 沪A， 1 深A
