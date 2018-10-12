@@ -1,4 +1,4 @@
-『扯线木偶』Puppet traderAPI
+『扯线木偶』Puppet Quant traderAPI
 ==
 
 实现交易接口，突破交易桎梏！
@@ -6,10 +6,25 @@
 实现了和股票交易客户端相同的【买卖撤查】功能。暂不支持【融资融券】交易功能。
 --
 
-puppet扯线木偶目前仅适用于独立交易端核新版(即THS)，需配合交易框架(hikyuu, quantaxis, rqalpha, vnpy, etc)使用。
+puppet扯线木偶目前仅适用于独立交易端核新版(即THS)，需配合量化交易框架(hikyuu, quantaxis, rqalpha, vnpy, etc)使用。
 -
-墙裂推荐使用实盘易，一站式量化交易解决方案 http://www.iguuu.com/e?x=19829 。
+墙裂推荐使用实盘易，一站式量化交易解决方案 http://www.iguuu.com/e?x=19829
 -
+
+**安装**
+
+打开命令提示符[Command Prompt]终端。
+>git clone https://github.com/Raytone-D/puppet.git
+或者浏览 https://github.com/Raytone-D/puppet
+点击页面右侧的绿色按钮[Clone or download]，选择[Download ZIP]，解压后切换到puppet文件夹
+.\puppet>pip install -e .
+或者.\puppet>python setup.py install
+
+>python
+>>>import puppet
+>>>puppet.__version__
+>>>puppet.Client()
+
 
 **未实现的功能：**
 
@@ -49,6 +64,8 @@ account         登录账号
 
 balance         可用余额
 
+assets          总资产
+
 position        持仓列表
 
 market_value    持仓市值
@@ -66,9 +83,9 @@ bingo           中签查询，部分券商可查。
 
 **代码示范：**
 
-import puppet as api
+import puppet
 
-quant = api.Client()
+quant = puppet.Client()
 
 quant.login(account_no='你的账号', password='你的交易密码', comm_pwd='你的通讯密码') # 登录客户端
 
@@ -78,7 +95,7 @@ quant.balance                       # 查看当前账户可用余额
 
 quant.market_value                  # 当前账号的实时市值
 
-quant.buy('000001', '9.32', '100')  # 限价委托，在[9.32]这个价位买入[100股][平安银行]，注意是str类型
+quant.buy('000001', 9.32, 100)  # 限价委托，[平安银行]在[9.32]这个价位买入[100股]
 
 quant.entrustment                   # 查看上述委托是否受理或成交了。
 
@@ -95,19 +112,7 @@ quant.cancel_buy()                  # 撤销当前全部买单
 
 3、Linux需安装最新的Wine，环境设为WIN7，并安装Win平台的Anaconda3。
 
-4、下载Anaconda3推荐用清华镜像：https://mirrors.tuna.tsinghua.edu.cn/anaconda/archive/
-
-
-**试用步骤：**
-
-1、上官网 https://github.com/Raytone-D/puppet 点击页面右上角的绿色按钮[Clone or download]，
-    选择[Download ZIP]，将文件下载到本地。
-
-2、解压文件。
-
-3、打开命令提示符[Command Prompt]终端。切换到puppet\puppet文件夹。
-
-4、测试：手动登录客户端，然后在终端窗口输入python puppet.py，回车。看输出没出错信息即可。
+4、下载Anaconda3，推荐用清华镜像：https://mirrors.tuna.tsinghua.edu.cn/anaconda/archive/
 
 
 **技术说明：**
