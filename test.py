@@ -21,15 +21,15 @@ if __name__ == '__main__':
 
     acc1 = {
         'account_no': '198800',
-        'password': '',
-        'comm_pwd': '',
+        'password': '123456',
+        'comm_pwd': True,  # 模拟交易端必须为True
         'client_path': r'你的交易客户端目录\xiadan.exe'
     }
 
     raytone = {
         'account_no': '12345678',
         'password': '666666',
-        'comm_pwd': '666666',
+        #'comm_pwd': '666666',  # 没有通讯密码可以不写
         'client_path': r'D:\Utils\htong\xiadan.exe'
     }
 
@@ -43,9 +43,5 @@ if __name__ == '__main__':
         '余额:%s\n' % quant.balance,
         '持仓市值:%s\n' % quant.market_value)
 
-    quant.buy('000001', '9.33', '100')
-    quant.wait(2).cancel('000001')
-    print('退出客户端...')
-    quant.exit()
-
-
+    quant.buy('510500', 4.688, 100)
+    quant.wait(2).cancel('510500')

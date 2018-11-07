@@ -5,10 +5,11 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.7.2"
+__version__ = "0.7.3"
 __license__ = 'MIT'
 
 import ctypes
+import ctypes.wintypes
 import time
 import io
 import subprocess
@@ -97,14 +98,14 @@ class Client:
 
         self.pid = subprocess.Popen(exe_path).pid
         pid = ctypes.c_ulong()
-        dlg = None
-        for i in range(60):
-            self.wait()  # have to
-            hLogin = user32.FindWindowExW(dlg, None, '#32770', '用户登录')
-            tid = user32.GetWindowThreadProcessId(hLogin, ctypes.byref(pid))
+        hwndChildAfter = None
+        for _ in range(60):
+            self.wait(0.5)  # have to
+            hLogin = user32.FindWindowExW(None, hwndChildAfter, '#32770', None)  # 用户登录窗口
+            user32.GetWindowThreadProcessId(hLogin, ctypes.byref(pid))
             if pid.value == self.pid:
-                for i in range(10):
-                    self.wait()
+                for _ in range(10):
+                    self.wait(0.5)
                     if self.visible(hLogin):
                         self.path = exe_path
                         self.hLogin = hLogin
@@ -112,7 +113,7 @@ class Client:
                         break
                 break
             else:
-                dlg = hLogin
+                hwndChildAfter = hLogin
 
         assert hLogin, '客户端没有运行或者找不到用户登录窗口'
 
@@ -141,30 +142,29 @@ class Client:
 
         buf = ctypes.create_unicode_buffer(32)
         if not comm_pwd:
-            for i in range(3):
-                self.wait()
+            for _ in range(10):
+                self.wait(0.5)
                 comm_pwd = self.verify(self.grab(), ocr)
                 if len(comm_pwd) >= 4:
                     break
         lparam = [account_no, password, comm_pwd]
-        assert all(lparam), '用户登录参数不全'
         lparam = iter(lparam)
         user32.EnumChildWindows(self.hLogin, match, None)
-        self.wait().click_button(self.hLogin, idButton=1006)
+        self.wait(0.5).click_button(self.hLogin, idButton=1006)
 
-        for i in range(30):
+        for _ in range(30):
             res = self.capture()
             if '暂停登录' in res or '通讯失败' in res:
                 raise Exception("%s \n木偶: '交易服务器维护，暂停登录，请稍后再试！'" % res)
             if self.visible():
+                print("{} 已登入交易服务器。".format(time.strftime('%Y-%m-%d %H:%M:%S %a')))
                 self.birthtime = time.ctime()
                 self.acc = account_no
                 self.title = self.text(self.root)
                 self.elapsed = time.time() - start
-                print("{} 已登入交易服务器。".format(time.strftime('%Y-%m-%d %H:%M:%S %a')))
                 # print('耗时:', self.elapsed )
-                return self.init()
-                break
+                self.init()
+                return self
 
     def exit(self):
         "退出系统并关闭程序"
