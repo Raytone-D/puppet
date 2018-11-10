@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.7.4"
+__version__ = "0.7.5"
 __license__ = 'MIT'
 
 import ctypes

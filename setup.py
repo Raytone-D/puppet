@@ -2,10 +2,10 @@
 
 from setuptools import setup
 
-VERSION = '0.7.2'
+from puppet import __version__ as VERSION
+
 REQUIRED = ['pyperclip']
 REQUIRES_PYTHON = '>=3.4.0'
-
 
 setup(
     name='puppet',
