@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.7.5"
+__version__ = "0.7.6"
 __license__ = 'MIT'
 
 import ctypes
@@ -156,7 +156,7 @@ class Client:
         lparam = [account_no, password, comm_pwd]
         lparam = iter(lparam)
         user32.EnumChildWindows(self.hLogin, match, None)
-        self.wait(0.5).click_button(self.hLogin, idButton=1006)
+        self.wait(0.5).click_button(self.hLogin, id_btn=1006)
 
         for _ in range(30):
             res = self.capture()
