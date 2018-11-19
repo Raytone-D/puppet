@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.7.8"
+__version__ = "0.7.9"
 __license__ = 'MIT'
 
 import ctypes
@@ -68,13 +68,15 @@ class Client:
         'market_value': (1014,),
         'table': (1047, 200, 1047),
         'cancel_order': (3348,),
+        'buy': (1003, 1032, 1033, 1018, 1034),
+        'sell': (1003, 1032, 1033, 1038, 1034),
         'buy2': (3451, 1032, 1541, 1033, 1018, 1034),
         'sell2': (3453, 1035, 1542, 1058, 1019, 1039)
     }  # 交易市场|证券代码|委托策略|买入价格|可买|买入数量
 
     ATTRS = ('account', 'balance', 'assets', 'position', 'market_value',
              'entrustment', 'cancelable', 'deals', 'new', 'bingo')
-
+    INIT = 'buy', 'sell', 'cancel', 'trade'
     PAGE = 59648, 59649
     FRESH = 32790
     WAY = {
@@ -143,7 +145,7 @@ class Client:
                         text = next(lparam)
                         self.fill(text, handle).wait(0.1)
                     except Exception as e:
-                        #print('登录信息填写完毕')
+                        # print('登录信息填写完毕')
                         return False
             return True
 
@@ -222,19 +224,20 @@ class Client:
         """ 撤单
             :choice: str, 可选“cancel_buy”、“cancel_sell”或"cancel", "cancel"是撤销指定股票symbol的全部委托。
         """
+        self.switch('cancel_order').wait(0.5)  # have to
         editor = self.get_handle('cancel_order')
-        self.wait(0.5)  # have to
         if isinstance(symbol, str):
             self.fill(symbol, editor)
-            for i in range(10):
+            for _ in range(10):
                 self.wait(0.3).click_button(label='查询代码')
                 hButton = user32.FindWindowExW(self.page, 0, 'Button', '撤单')
                 if user32.IsWindowEnabled(hButton):  # 撤单按钮的状态检查
                     break
-        return self.click_button(label={'cancel': '撤单',
-                                        'cancel_all': '全撤(Z /)',
-                                        'cancel_buy': '撤买(X)',
-                                        'cancel_sell': '撤卖(C)'}[choice]).answer()
+        return self.click_button(label={
+            'cancel': '撤单',
+            'cancel_all': '全撤(Z /)',
+            'cancel_buy': '撤买(X)',
+            'cancel_sell': '撤卖(C)'}[choice]).answer()
 
     def cancel_all(self):  # 全撤
         return self.cancel_order()
@@ -315,9 +318,9 @@ class Client:
             return self
 
     def init(self):
-        INIT = {'trade': 512}
-        for key in INIT.keys():
-            self.switch(key).wait(0.3)
+        for name in self.INIT:
+            self.switch(name).wait(0.3)
+
         user32.ShowOwnedPopups(self.root, False)
         print('木偶："我准备好了"')
         return self
@@ -330,8 +333,10 @@ class Client:
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板"
         _replace = {'参考市值': '市值', '最新市值': '市值'}  # 兼容国金/平安"最新市值"、银河“参考市值”。
         pyperclip.copy('nan')
-        user32.SendMessageTimeoutW(h_table, MSG['WM_COMMAND'], MSG['COPY'], 0, 1, 300)
+        user32.SendMessageTimeoutW(
+            h_table, MSG['WM_COMMAND'], MSG['COPY'], 0, 1, 300)
 
+        # 关闭验证码弹窗
         handle = user32.GetLastActivePopup(self.root)
         if handle != self.root:
             for _ in range(9):
@@ -342,6 +347,7 @@ class Client:
                     self.fill(text, hEdit).click_button(handle).wait(0.3)  # have to wait!
                     break
 
+        # 数据格式化
         ret = pyperclip.paste().splitlines()
         temp = (x.split('\t') for x in ret)
         header = next(temp)
@@ -361,7 +367,8 @@ class Client:
         if action in ('buy', 'buy2', 'sell', 'sell2'):
             data = [user32.GetDlgItem(self.page, i) for i in m]
         else:
-            data = reduce(user32.GetDlgItem, m, self.root if action in ('account', 'mkt') else self.page)
+            data = reduce(user32.GetDlgItem, m, self.root if action in (
+                'account', 'mkt') else self.page)
         return data
 
     def text(self, obj, key=0):
@@ -373,9 +380,11 @@ class Client:
     def _text(self, h_text=None, id_text=None):
         buf = ctypes.create_unicode_buffer(64)
         if id_text:
-            user32.SendDlgItemMessageW(self.page, id_text, MSG['WM_GETTEXT'], 64, buf)
+            user32.SendDlgItemMessageW(
+                self.page, id_text, MSG['WM_GETTEXT'], 64, buf)
         else:
-            user32.SendMessageW(h_text or next(self.members), MSG['WM_GETTEXT'], 64, buf)
+            user32.SendMessageW(
+                h_text or next(self.members), MSG['WM_GETTEXT'], 64, buf)
         return buf.value
 
     def fill(self, text, h_edit=None, h_dialog=None, id_edit=None):
@@ -386,7 +395,8 @@ class Client:
             if h_edit:
                 user32.SendMessageW(h_edit, MSG['WM_SETTEXT'], 0, text)
             else:
-                user32.SendDlgItemMessageW(h_dialog, id_edit, MSG['WM_SETTEXT'], 0, text)
+                user32.SendDlgItemMessageW(
+                    h_dialog, id_edit, MSG['WM_SETTEXT'], 0, text)
         return self
 
     def click_button(self, h_dialog=None, label='确定', id_btn=None):
@@ -408,7 +418,8 @@ class Client:
 
         buf = io.BytesIO()
         rect = ctypes.wintypes.RECT()
-        hImage = user32.FindWindowExW(hParent or self.hLogin, None, 'Static', "")
+        hImage = user32.FindWindowExW(
+            hParent or self.hLogin, None, 'Static', "")
         user32.GetWindowRect(hImage, ctypes.byref(rect))
         user32.SetForegroundWindow(hParent or self.hLogin)
         screenshot = ImageGrab.grab((rect.left, rect.top, rect.right + (rect.right - rect.left) * 0.33, rect.bottom))
@@ -419,7 +430,7 @@ class Client:
         try:
             from aip import AipOcr
         except Exception as e:
-            print('e \n请在命令行下执行: pip install baidu-aip')
+            print(e, '\n请在命令行下执行: pip install baidu-aip')
 
         conf = ocr or {
             'appId': '11645803',
@@ -431,7 +442,7 @@ class Client:
         try:
             r = ocr.basicGeneral(image).get('words_result')[0]['words']
         except Exception as e:
-            print('e \n验证码图片无法识别！')
+            print(e, '\n验证码图片无法识别！')
             r = False
         return r
 
