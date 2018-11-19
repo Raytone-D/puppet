@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.7.6"
+__version__ = "0.7.7"
 __license__ = 'MIT'
 
 import ctypes
@@ -170,6 +170,8 @@ class Client:
                 self.elapsed = time.time() - start
                 # print('耗时:', self.elapsed )
                 self.init()
+                self.mkt = (0, 1) if self._text(
+                    self.get_handle('mkt')).startswith('上海') else (1, 0)
                 return self
 
     def exit(self):
@@ -475,10 +477,10 @@ class Client:
 
     def switch_mkt(self, symbol: str):
         """
-        :Prefix:上交所: '5'基, '6'A, '7'申购, '9'B
+        :Prefix:上交所: '5'基, '6'A, '7'申购, '11'转债', 9'B
         适配银河|中山证券的默认值(0 ->上海Ａ股)。注意全角字母Ａ
         """
-        index = self.mkt[0] if symbol.startswith(('6', '5', '7')) else self.mkt[1]
+        index = self.mkt[0] if symbol.startswith(('6', '5', '7', '11')) else self.mkt[1]
         return self.switch_combo(index, next(self.members))
 
     def switch_way(self, index):
