@@ -6,9 +6,10 @@ if __name__ == '__main__':
     import platform
     import time
 
-    from puppet.puppet import Puppet
+    import puppet
 
-    print('\n{}\nPython Version: {}'.format(platform.platform(), platform.python_version()))
+    print('\n{}\nPython Version: {}'.format(
+        platform.platform(), platform.python_version()))
     print('默认使用百度云OCR进行验证码识别')
     print("\n注意！必须将client_path的值修改为你自己的交易客户端路径！\n")
     time.sleep(3)
@@ -33,10 +34,12 @@ if __name__ == '__main__':
         'client_path': r'D:\Utils\htong\xiadan.exe'
     }
 
-    title='广发证券核新网上交易系统7.65' # 这个版本拷贝数据会弹窗询问
-    # quant = Puppet() # 已经登录的，标题是"网上股票交易系统5.0"的交易客户端。
-    # quant = Puppet(title) # 广发需要指定标题
-    quant = Puppet().login(**acc1).wait(2)
+    # 绑定已经登录的交易客户端，广发证券客户端需要额外指定标题
+    title = '广发证券核新网上交易系统7.65'
+    # quant = puppet.Client(title)
+
+    # 自动登录交易客户端
+    quant = puppet.Client().login(**acc1).wait(2)
 
     print(
         vars(quant), '\n',

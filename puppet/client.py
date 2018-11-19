@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.7.7"
+__version__ = "0.7.8"
 __license__ = 'MIT'
 
 import ctypes
@@ -130,6 +130,7 @@ class Client:
             comm_pwd: 通讯密码, str
         """
         start = time.time()
+        assert client_path, "交易客户端路径不能为空"
         self.run(client_path)
         print('\n{} 正在尝试登入交易服务器...'.format(time.strftime('%Y-%m-%d %H:%M:%S %a')))
 
