@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.7.9"
+__version__ = "0.7.10"
 __license__ = 'MIT'
 
 import ctypes
@@ -333,8 +333,8 @@ class Client:
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板"
         _replace = {'参考市值': '市值', '最新市值': '市值'}  # 兼容国金/平安"最新市值"、银河“参考市值”。
         pyperclip.copy('nan')
-        user32.SendMessageTimeoutW(
-            h_table, MSG['WM_COMMAND'], MSG['COPY'], 0, 1, 300)
+        user32.PostMessageW(h_table, MSG['WM_COMMAND'], MSG['COPY'], 0)
+        self.wait()
 
         # 关闭验证码弹窗
         handle = user32.GetLastActivePopup(self.root)
