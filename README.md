@@ -1,44 +1,70 @@
-『扯线木偶』Puppet Quant traderAPI
-==
+#『扯线木偶』Puppet Quant traderAPI
 
-实现交易接口，突破交易桎梏！
---
-实现了和股票交易客户端相同的【买卖撤查】功能。暂不支持【融资融券】交易功能。
+突破交易桎梏！
 --
 
 puppet扯线木偶目前仅适用于独立交易端核新版(即THS)，需配合量化交易框架(hikyuu, quantaxis, rqalpha, vnpy, etc)使用。
 -
 墙裂推荐使用实盘易，一站式量化交易解决方案 http://www.iguuu.com/e?x=19829
 -
+实现了和股票交易客户端相同的【买卖撤查】功能。暂不支持【融资融券】交易功能。  
+
+**快速入门**
+```python
+from puppet import Client
+
+# 自动登录账户
+accinfo = {
+    'account_no': '你的账号',
+    'password': '登录密码',
+    'client_path': 'path/to/xiadan.exe',
+    'comm_pwd': '通讯密码'
+}  # comm_pwd 是可选参数
+acc = Client().login(*accinfo)
+
+# 绑定已登录账号
+title = '广发证券核新网上交易系统7.65'
+acc = Client().bind(title)
+
+# 交易
+acc.buy('000001', 12.68, 100)
+acc.sell('000001', 12.68, 100)
+acc.cancel(choice='cancel_buy')
+acc.cancel_sell()
+
+# 查询
+acc.position
+acc.balance
+acc.assets
+```
 
 **安装**
 
-打开命令提示符[Command Prompt]终端。
->git clone https://github.com/Raytone-D/puppet.git
-或者浏览 https://github.com/Raytone-D/puppet
-点击页面右侧的绿色按钮[Clone or download]，选择[Download ZIP]，解压后切换到puppet文件夹
-.\puppet>pip install -e .
-或者.\puppet>python setup.py install
+在命令提示符(Command Prompt)后面：
+```shell
+git clone https://github.com/Raytone-D/puppet.git
 
->python
->>>import puppet
->>>puppet.__version__
->>>puppet.Client()
+python /path/to/puppet/setup.py install
 
+或者浏览
+https://github.com/Raytone-D/puppet
+点击页面的绿色按钮[Clone or download]，选择[Download ZIP]，
+
+pip install /path/to/puppet-master.zip
+```
 
 **未实现的功能：**
 
-【逆回购】
+逆回购、基金盘后业务  
 
-【基金盘后业务】
+<br/>
+**已实现的功能：**
 
-**已实现的登录方法：**
+login()  
+登录客户端(支持通讯密码或验证码)
 
-login()         登录客户端(支持通讯密码或验证码)
-
-exit()          关闭客户端
-
-**已实现的交易方法：**
+exit()  
+关闭客户端
 
 trade()          双向委托，【限价】或【市价】委托。
 
@@ -57,8 +83,6 @@ cancel_buy()    撤买
 cancel_sell()   撤卖
 
 raffle()        新股申购
-
-**已实现的查询功能：**
 
 account         登录账号
 
@@ -79,27 +103,6 @@ deals           当日成交
 new             当日新股
 
 bingo           中签查询，部分券商可查。
-
-
-**代码示范：**
-
-import puppet
-
-quant = puppet.Client()
-
-quant.login(account_no='你的账号', password='你的交易密码', comm_pwd='你的通讯密码') # 登录客户端
-
-quant.account                       # 查看当前登录的账号
-
-quant.balance                       # 查看当前账户可用余额
-
-quant.market_value                  # 当前账号的实时市值
-
-quant.buy('000001', 9.32, 100)  # 限价委托，[平安银行]在[9.32]这个价位买入[100股]
-
-quant.entrustment                   # 查看上述委托是否受理或成交了。
-
-quant.cancel_buy()                  # 撤销当前全部买单
 
 
 **使用环境：**

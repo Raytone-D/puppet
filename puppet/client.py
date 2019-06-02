@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.7.10"
+__version__ = "0.7.11b"
 __license__ = 'MIT'
 
 import ctypes
@@ -50,7 +50,7 @@ class Client:
         'buy2': 512,
         'sell2': 512,
         'account': 512,
-        'balance': 512,
+        'balance': 165,
         'position': 512,
         'market_value': 165,
         'assets': 165,
@@ -63,13 +63,13 @@ class Client:
     MEMBERS = {
         'account': (59392, 0, 1711),
         'mkt': (59392, 0, 1003),
-        'balance': (1038,),
+        'balance': (1012,),
         'assets': (1015,),
         'market_value': (1014,),
         'table': (1047, 200, 1047),
         'cancel_order': (3348,),
-        'buy': (1003, 1032, 1033, 1018, 1034),
-        'sell': (1003, 1032, 1033, 1038, 1034),
+        'buy': (1032, 1541, 1033, 1018, 1034),
+        'sell': (1032, 1541, 1033, 1038, 1034),
         'buy2': (3451, 1032, 1541, 1033, 1018, 1034),
         'sell2': (3453, 1035, 1542, 1058, 1019, 1039)
     }  # 交易市场|证券代码|委托策略|买入价格|可买|买入数量
@@ -101,31 +101,40 @@ class Client:
 
     def run(self, exe_path):
         assert 'xiadan' in subprocess.os.path.basename(exe_path).split('.')\
-            and subprocess.os.path.exists(exe_path), '客户端路径("%s")错误' % exe_path
-        print('{} 正在尝试运行客户端("{}")...'.format(time.strftime('%Y-%m-%d %H:%M:%S %a'), exe_path))
+            and subprocess.os.path.exists(
+                exe_path), '客户端路径("%s")错误' % exe_path
+        print('{} 正在尝试运行客户端("{}")...'.format(
+            time.strftime('%Y-%m-%d %H:%M:%S %a'), exe_path))
 
         self.pid = subprocess.Popen(exe_path).pid
         pid = ctypes.c_ulong()
         hwndChildAfter = None
-        for _ in range(60):
-            self.wait(0.5)  # have to
-            hLogin = user32.FindWindowExW(None, hwndChildAfter, '#32770', None)  # 用户登录窗口
-            user32.GetWindowThreadProcessId(hLogin, ctypes.byref(pid))
-            if pid.value == self.pid:
-                for _ in range(10):
-                    self.wait(0.5)
-                    if self.visible(hLogin):
-                        self.path = exe_path
-                        self.hLogin = hLogin
-                        self.root = user32.GetParent(hLogin)
-                        break
+        counter = range(30)
+
+        for _ in counter:
+            self.wait()  # have to
+            # 用户登录窗口
+            hDlg = user32.FindWindowExW(None, hwndChildAfter, '#32770', None)
+            handle = user32.GetDlgItem(hDlg, 1011)  # ComboBox 0x3F3 1011
+            if handle:
+                user32.GetWindowThreadProcessId(hDlg, ctypes.byref(pid))
+                if pid.value == self.pid:
+                    break
+            hwndChildAfter = hDlg
+
+        for _ in counter:
+            self.wait()
+            if self.visible(hDlg):
+                print('{} 登录窗口准备就绪。'.format(
+                    time.strftime('%Y-%m-%d %H:%M:%S %a')))
                 break
-            else:
-                hwndChildAfter = hLogin
 
-        assert hLogin, '客户端没有运行或者找不到用户登录窗口'
+        self.hLogin = hDlg
+        self.path = exe_path
+        self.root = user32.GetParent(hDlg)
 
-    def login(self, account_no=None, password=None, comm_pwd=None, client_path=None, ocr=None, **kwargs):
+    def login(self, account_no=None, password=None, comm_pwd=None, \
+              client_path=None, ocr=None, **kwargs):
         """ 重新登录或切换账户
             account_no: 账号, str
             password: 交易密码, str
@@ -134,7 +143,9 @@ class Client:
         start = time.time()
         assert client_path, "交易客户端路径不能为空"
         self.run(client_path)
-        print('\n{} 正在尝试登入交易服务器...'.format(time.strftime('%Y-%m-%d %H:%M:%S %a')))
+        print('{} 正在尝试登入交易服务器...'.format(
+            time.strftime('%Y-%m-%d %H:%M:%S %a')))
+        buf = ctypes.create_unicode_buffer(32)
 
         @ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, ctypes.c_wchar_p)
         def match(handle, args):
@@ -144,12 +155,11 @@ class Client:
                     try:
                         text = next(lparam)
                         self.fill(text, handle).wait(0.1)
-                    except Exception as e:
+                    except Exception:
                         # print('登录信息填写完毕')
                         return False
             return True
 
-        buf = ctypes.create_unicode_buffer(32)
         if not comm_pwd:
             for _ in range(10):
                 self.wait(0.5)
@@ -203,19 +213,19 @@ class Client:
             5 ALL_OR_CANCEL      全额成交或撤销 深圳
         """
         self.switch(action)
+        mkt = self.get_handle('mkt')
         self.members = iter(self.get_handle(action))
         price = None if isinstance(arg, int) else arg
 
-        self.switch_mkt(symbol).fill(symbol).wait(0.2).switch_way(arg).fill(price)
+        self.switch_mkt(symbol, mkt).fill(symbol).wait(0.2).switch_way(arg).wait().fill(price)
         full = self._text()
-        return self.fill(qty or full).click_button(label={'buy2': '买入[B]',
-                                                          'sell2': '卖出[S]'}[action])
+        return self.fill(qty or full).click_button(label={'buy': '买入[B]', 'sell': '卖出[S]'}[action])
 
     def buy(self, symbol, arg, qty):
-        return self.trade('buy2', symbol, arg, qty).answer()
+        return self.trade('buy', symbol, arg, qty).answer()
 
     def sell(self, symbol, arg, qty):
-        return self.trade('sell2', symbol, arg, qty).answer()
+        return self.trade('sell', symbol, arg, qty).answer()
 
     def cancel(self, symbol=None, action='cancel_all'):
         return self.cancel_order(symbol, action)
@@ -278,11 +288,16 @@ class Client:
                         # 'market_value': ord('W'),
                         'deals': ord('E')}.get(category)).wait(0.5)
         if category in ('assets', 'balance', 'market_value'):
-            data = float(self._text(self.get_handle(category)))
+            for i in range(10):
+                data = self._text(self.get_handle(category))
+                if data:
+                    data = float(data)
+                    break
+                else:
+                    self.wait(0.2)
+
         else:
             data = self.copy_data(self.get_handle(category))
-        # if category is 'market_value':
-        #    data = sum(float(pair.get('市值', 0)) for pair in data)
         return data
 
     def __getattr__(self, attrname):
@@ -305,6 +320,7 @@ class Client:
             self.acc = self.account
             self.title = self.text(self.root)
             self.mkt = (0, 1) if self._text(self.get_handle('mkt')).startswith('上海') else (1, 0)
+            self.idx = 0
             return self.root
 
     def visible(self, hwnd=None):
@@ -322,7 +338,7 @@ class Client:
             self.switch(name).wait(0.3)
 
         user32.ShowOwnedPopups(self.root, False)
-        print('木偶："我准备好了"')
+        print("{} 木偶准备就绪！".format(time.strftime('%Y-%m-%d %H:%M:%S %a')))
         return self
 
     def wait(self, timeout=0.5):
@@ -374,7 +390,7 @@ class Client:
     def text(self, obj, key=0):
         buf = ctypes.create_unicode_buffer(32)
         {0: user32.GetWindowTextW, 1: user32.GetClassNameW}.get(key)(obj, buf, 32)
-        #user32.SendMessageW(obj, MSG['WM_GETTEXT'], 32, buf)
+        # user32.SendMessageW(obj, MSG['WM_GETTEXT'], 32, buf)
         return buf.value
 
     def _text(self, h_text=None, id_text=None):
@@ -414,6 +430,7 @@ class Client:
         return self
 
     def grab(self, hParent=None):
+        "屏幕截图"
         from PIL import ImageGrab
 
         buf = io.BytesIO()
@@ -476,28 +493,32 @@ class Client:
         user32.PostMessageW(self.root, MSG['WM_COMMAND'], self.FRESH, 0)
         return self if self.visible() else False
 
-    def switch_combo(self, index, hCombo=None):
+    def switch_combo(self, hCombo=None):
         handle = hCombo or next(self.members)
-        user32.SendMessageW(handle, MSG['CB_SETCURSEL'], index, 0)
-        r = user32.SendMessageW(user32.GetParent(handle),
-                                MSG['WM_COMMAND'],
-                                MSG['CBN_SELCHANGE'] << 16 | user32.GetDlgCtrlID(handle),
-                                handle)
-        if not r:
-            print('切换失败', r)
+        user32.SendMessageW(user32.GetParent(handle),
+                            MSG['WM_COMMAND'],
+                            MSG['CBN_SELCHANGE'] << 16 | user32.GetDlgCtrlID(handle),
+                            handle)
         return self
 
-    def switch_mkt(self, symbol: str):
+    def switch_mkt(self, symbol: str, handle: int):
         """
         :Prefix:上交所: '5'基, '6'A, '7'申购, '11'转债', 9'B
         适配银河|中山证券的默认值(0 ->上海Ａ股)。注意全角字母Ａ
         """
-        index = self.mkt[0] if symbol.startswith(('6', '5', '7', '11')) else self.mkt[1]
-        return self.switch_combo(index, next(self.members))
+        index = self.mkt[0] if symbol.startswith(
+            ('6', '5', '7', '11')) else self.mkt[1]
+        user32.SendMessageW(
+            handle, MSG['CB_SETCURSEL'], index, 0)
+        return self.switch_combo(handle)
 
     def switch_way(self, index):
         "切换委托策略"
-        return self.switch_combo(index if index in (1, 2, 3, 4, 5) else 0)
+        handle = next(self.members)
+        if index not in (1, 2, 3, 4, 5):
+            index = 0
+        user32.SendMessageW(handle, MSG['CB_SETCURSEL'], index, 0)
+        return self.switch_combo(handle)
 
     def if_fund(self, symbol, price):
         if symbol.startswith('5'):
