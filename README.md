@@ -1,14 +1,9 @@
-#『扯线木偶』Puppet Quant traderAPI
-
-突破交易桎梏！
---
-
-puppet扯线木偶目前仅适用于独立交易端核新版(即THS)，需配合量化交易框架(hikyuu, quantaxis, rqalpha, vnpy, etc)使用。
--
-墙裂推荐使用实盘易，一站式量化交易解决方案 http://www.iguuu.com/e?x=19829
--
-实现了和股票交易客户端相同的【买卖撤查】功能。暂不支持【融资融券】交易功能。  
-
+# 『扯线木偶』Puppet TraderAPI
+## 突破交易桎梏！
+&nbsp;
+## puppet扯线木偶目前仅适用于独立交易端核新版(即THS)，需配合量化交易框架(hikyuu, quantaxis, rqalpha, vnpy, etc)使用。<br/>
+## 墙裂推荐使用实盘易，一站式量化交易解决方案 http://www.iguuu.com/e?x=19829 <br/>
+## 实现了和股票交易客户端相同的【买卖撤查】功能。暂不支持【融资融券】交易功能。
 **快速入门**
 ```python
 from puppet import Client
@@ -45,11 +40,10 @@ acc.assets
 git clone https://github.com/Raytone-D/puppet.git
 
 python /path/to/puppet/setup.py install
-
-或者浏览
-https://github.com/Raytone-D/puppet
+```
+或者浏览 https://github.com/Raytone-D/puppet
 点击页面的绿色按钮[Clone or download]，选择[Download ZIP]，
-
+```shell
 pip install /path/to/puppet-master.zip
 ```
 

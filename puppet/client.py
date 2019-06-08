@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.7.11b"
+__version__ = "0.7.12"
 __license__ = 'MIT'
 
 import ctypes
@@ -22,17 +22,19 @@ try:
 except Exception as e:
     print("{}\n请先在命令行下运行：pip install pyperclip，再使用puppet！".format(e))
 
-MSG = {'WM_SETTEXT': 12,
-       'WM_GETTEXT': 13,
-       'WM_CLOSE': 16,
-       'WM_KEYDOWN': 256,
-       'WM_KEYUP': 257,
-       'WM_COMMAND': 273,
-       'BM_CLICK': 245,
-       'CB_GETCOUNT': 326,
-       'CB_SETCURSEL': 334,
-       'CBN_SELCHANGE': 1,
-       'COPY': 57634}
+MSG = {
+    'WM_SETTEXT': 12,
+    'WM_GETTEXT': 13,
+    'WM_CLOSE': 16,
+    'WM_KEYDOWN': 256,
+    'WM_KEYUP': 257,
+    'WM_COMMAND': 273,
+    'BM_CLICK': 245,
+    'CB_GETCOUNT': 326,
+    'CB_SETCURSEL': 334,
+    'CBN_SELCHANGE': 1,
+    'COPY': 57634
+}
 
 user32 = ctypes.windll.user32
 
@@ -49,12 +51,13 @@ class Client:
         'trade': 512,
         'buy2': 512,
         'sell2': 512,
-        'account': 512,
+        'account': 165,
         'balance': 165,
-        'position': 512,
+        'position': 165,
         'market_value': 165,
         'assets': 165,
-        'deals': 512,
+        'deals': 167,
+        'delivery_order': 176,
         'new': 554,
         'raffle': 554,
         'batch': 5170,
@@ -63,11 +66,11 @@ class Client:
     MEMBERS = {
         'account': (59392, 0, 1711),
         'mkt': (59392, 0, 1003),
-        'balance': (1012,),
-        'assets': (1015,),
-        'market_value': (1014,),
+        'balance': (1012, ),
+        'assets': (1015, ),
+        'market_value': (1014, ),
         'table': (1047, 200, 1047),
-        'cancel_order': (3348,),
+        'cancel_order': (3348, ),
         'buy': (1032, 1541, 1033, 1018, 1034),
         'sell': (1032, 1541, 1033, 1038, 1034),
         'buy2': (3451, 1032, 1541, 1033, 1018, 1034),
@@ -76,7 +79,7 @@ class Client:
 
     ATTRS = ('account', 'balance', 'assets', 'position', 'market_value',
              'entrustment', 'cancelable', 'deals', 'new', 'bingo')
-    INIT = 'buy', 'sell', 'cancel', 'trade'
+    INIT = 'balance', 'buy', 'sell', 'cancel', 'assets'
     PAGE = 59648, 59649
     FRESH = 32790
     WAY = {
@@ -95,6 +98,7 @@ class Client:
         """
         :arg: 客户端标题(str)或客户端根句柄(int)
         """
+        self.prev = time.time()
         self.bind(arg)
 
     "Login"
@@ -133,7 +137,7 @@ class Client:
         self.path = exe_path
         self.root = user32.GetParent(hDlg)
 
-    def login(self, account_no=None, password=None, comm_pwd=None, \
+    def login(self, account_no=None, password=None, comm_pwd=None,
               client_path=None, ocr=None, **kwargs):
         """ 重新登录或切换账户
             account_no: 账号, str
@@ -176,7 +180,8 @@ class Client:
             if '暂停登录' in res or '通讯失败' in res:
                 raise Exception("%s \n木偶: '交易服务器维护，暂停登录，请稍后再试！'" % res)
             if self.visible():
-                print("{} 已登入交易服务器。".format(time.strftime('%Y-%m-%d %H:%M:%S %a')))
+                print("{} 已登入交易服务器。".format(
+                    time.strftime('%Y-%m-%d %H:%M:%S %a')))
                 self.birthtime = time.ctime()
                 self.acc = account_no
                 self.title = self.text(self.root)
@@ -212,14 +217,21 @@ class Client:
             4 BEST5_OR_CANCEL    最优五档即时成交剩余撤销 深圳
             5 ALL_OR_CANCEL      全额成交或撤销 深圳
         """
+        self.query.cache_clear()
+
         self.switch(action)
         mkt = self.get_handle('mkt')
         self.members = iter(self.get_handle(action))
         price = None if isinstance(arg, int) else arg
 
-        self.switch_mkt(symbol, mkt).fill(symbol).wait(0.2).switch_way(arg).wait().fill(price)
+        self.switch_mkt(
+            symbol,
+            mkt).fill(symbol).wait(0.2).switch_way(arg).wait().fill(price)
         full = self._text()
-        return self.fill(qty or full).click_button(label={'buy': '买入[B]', 'sell': '卖出[S]'}[action])
+        return self.fill(qty or full).click_button(label={
+            'buy': '买入[B]',
+            'sell': '卖出[S]'
+        }[action])
 
     def buy(self, symbol, arg, qty):
         return self.trade('buy', symbol, arg, qty).answer()
@@ -232,8 +244,12 @@ class Client:
 
     def cancel_order(self, symbol=None, choice='cancel_all'):
         """ 撤单
-            :choice: str, 可选“cancel_buy”、“cancel_sell”或"cancel", "cancel"是撤销指定股票symbol的全部委托。
+
+        :choice: str, 可选“cancel_buy”、“cancel_sell”或"cancel"。
+        "cancel"是撤销指定股票symbol的全部委托。
         """
+        self.query.cache_clear()
+
         self.switch('cancel_order').wait(0.5)  # have to
         editor = self.get_handle('cancel_order')
         if isinstance(symbol, str):
@@ -243,11 +259,13 @@ class Client:
                 hButton = user32.FindWindowExW(self.page, 0, 'Button', '撤单')
                 if user32.IsWindowEnabled(hButton):  # 撤单按钮的状态检查
                     break
-        return self.click_button(label={
-            'cancel': '撤单',
-            'cancel_all': '全撤(Z /)',
-            'cancel_buy': '撤买(X)',
-            'cancel_sell': '撤卖(C)'}[choice]).answer()
+        return self.click_button(
+            label={
+                'cancel': '撤单',
+                'cancel_all': '全撤(Z /)',
+                'cancel_buy': '撤买(X)',
+                'cancel_sell': '撤卖(C)'
+            }[choice]).answer()
 
     def cancel_all(self):  # 全撤
         return self.cancel_order()
@@ -260,6 +278,8 @@ class Client:
 
     def raffle(self):
         "新股申购"
+        self.query.cache_clear()
+
         def func(ipo):
             symbol = ipo.get('新股代码') or ipo.get('证券代码')
             price = ipo.get('申购价格') or ipo.get('发行价格')
@@ -272,23 +292,32 @@ class Client:
             else:
                 r = (0, '不可预测的申购错误')
             return r
+
         target = self.new
         if target:
             return [func(ipo) for ipo in target]
 
     "Query"
 
+    @lru_cache(64)
     def query(self, category):
+        """
+        2019-5-19 加入数据缓存功能
+        """
         if category not in self.ATTRS:
             raise AttributeError(category)
         if category in ('account', 'mkt'):
             return self._text(self.get_handle('account'))
+
+        print('Querying on-line...')
         self.switch(category)
-        self.click_key({'position': ord('W'),
-                        # 'market_value': ord('W'),
-                        'deals': ord('E')}.get(category)).wait(0.5)
+        self.click_key({
+            'position': ord('W'),
+            # 'market_value': ord('W'),
+            'deals': ord('E')
+        }.get(category)).wait(0.5)
         if category in ('assets', 'balance', 'market_value'):
-            for i in range(10):
+            for _ in range(10):
                 data = self._text(self.get_handle(category))
                 if data:
                     data = float(data)
@@ -314,19 +343,23 @@ class Client:
         :arg: 客户端的标题或根句柄
         :mkt: 交易市场的索引值
         """
-        self.root = arg if isinstance(arg, int) else user32.FindWindowW(0, arg or '网上股票交易系统5.0')
+        self.root = arg if isinstance(arg, int) else user32.FindWindowW(
+            0, arg or '网上股票交易系统5.0')
         if self.visible(self.root):
             self.birthtime = time.ctime()
             self.acc = self.account
             self.title = self.text(self.root)
-            self.mkt = (0, 1) if self._text(self.get_handle('mkt')).startswith('上海') else (1, 0)
+            self.mkt = (0, 1) if self._text(
+                self.get_handle('mkt')).startswith('上海') else (1, 0)
             self.idx = 0
+            self.init()
             return self.root
 
     def visible(self, hwnd=None):
         return user32.IsWindowVisible(hwnd or self.root)
 
     def switch(self, name):
+        self.prev = time.time()
         assert self.visible(), "客户端已关闭或账户已登出"
         node = name if isinstance(name, int) else self.NODE.get(name)
         if user32.SendMessageW(self.root, MSG['WM_COMMAND'], node, 0):
@@ -360,7 +393,8 @@ class Client:
                 if self.visible(handle):
                     text = self.verify(self.grab(handle))
                     hEdit = user32.FindWindowExW(handle, None, 'Edit', "")
-                    self.fill(text, hEdit).click_button(handle).wait(0.3)  # have to wait!
+                    self.fill(text, hEdit).click_button(handle).wait(
+                        0.3)  # have to wait!
                     break
 
         # 数据格式化
@@ -373,7 +407,7 @@ class Client:
                 header.remove(tag)
         return [OrderedDict(zip(header, x)) for x in temp]
 
-    @lru_cache(None)
+    @lru_cache(maxsize=64)
     def get_handle(self, action: str):
         """
         :action: 操作标识符
@@ -383,24 +417,28 @@ class Client:
         if action in ('buy', 'buy2', 'sell', 'sell2'):
             data = [user32.GetDlgItem(self.page, i) for i in m]
         else:
-            data = reduce(user32.GetDlgItem, m, self.root if action in (
-                'account', 'mkt') else self.page)
+            data = reduce(
+                user32.GetDlgItem, m,
+                self.root if action in ('account', 'mkt') else self.page)
         return data
 
     def text(self, obj, key=0):
         buf = ctypes.create_unicode_buffer(32)
-        {0: user32.GetWindowTextW, 1: user32.GetClassNameW}.get(key)(obj, buf, 32)
+        {
+            0: user32.GetWindowTextW,
+            1: user32.GetClassNameW
+        }.get(key)(obj, buf, 32)
         # user32.SendMessageW(obj, MSG['WM_GETTEXT'], 32, buf)
         return buf.value
 
     def _text(self, h_text=None, id_text=None):
         buf = ctypes.create_unicode_buffer(64)
         if id_text:
-            user32.SendDlgItemMessageW(
-                self.page, id_text, MSG['WM_GETTEXT'], 64, buf)
+            user32.SendDlgItemMessageW(self.page, id_text, MSG['WM_GETTEXT'],
+                                       64, buf)
         else:
-            user32.SendMessageW(
-                h_text or next(self.members), MSG['WM_GETTEXT'], 64, buf)
+            user32.SendMessageW(h_text or next(self.members),
+                                MSG['WM_GETTEXT'], 64, buf)
         return buf.value
 
     def fill(self, text, h_edit=None, h_dialog=None, id_edit=None):
@@ -411,8 +449,8 @@ class Client:
             if h_edit:
                 user32.SendMessageW(h_edit, MSG['WM_SETTEXT'], 0, text)
             else:
-                user32.SendDlgItemMessageW(
-                    h_dialog, id_edit, MSG['WM_SETTEXT'], 0, text)
+                user32.SendDlgItemMessageW(h_dialog, id_edit,
+                                           MSG['WM_SETTEXT'], 0, text)
         return self
 
     def click_button(self, h_dialog=None, label='确定', id_btn=None):
@@ -435,11 +473,13 @@ class Client:
 
         buf = io.BytesIO()
         rect = ctypes.wintypes.RECT()
-        hImage = user32.FindWindowExW(
-            hParent or self.hLogin, None, 'Static', "")
+        hImage = user32.FindWindowExW(hParent or self.hLogin, None, 'Static',
+                                      "")
         user32.GetWindowRect(hImage, ctypes.byref(rect))
         user32.SetForegroundWindow(hParent or self.hLogin)
-        screenshot = ImageGrab.grab((rect.left, rect.top, rect.right + (rect.right - rect.left) * 0.33, rect.bottom))
+        screenshot = ImageGrab.grab(
+            (rect.left, rect.top, rect.right + (rect.right - rect.left) * 0.33,
+             rect.bottom))
         screenshot.save(buf, 'png')
         return buf.getvalue()
 
@@ -484,21 +524,22 @@ class Client:
 
     def answer(self):
         text = self.capture()
-        if any(('小数部分' in text,)):
+        if any(('小数部分' in text, )):
             print(text)
             text = self.capture()
-        return (re.findall(r'(\w*[0-9]+)\w*', text)[0], text) if '合同编号' in text else (0, text)
+        return (re.findall(r'(\w*[0-9]+)\w*', text)[0],
+                text) if '合同编号' in text else (0, text)
 
     def refresh(self):
+        self.prev = time.time()
         user32.PostMessageW(self.root, MSG['WM_COMMAND'], self.FRESH, 0)
         return self if self.visible() else False
 
     def switch_combo(self, hCombo=None):
         handle = hCombo or next(self.members)
-        user32.SendMessageW(user32.GetParent(handle),
-                            MSG['WM_COMMAND'],
-                            MSG['CBN_SELCHANGE'] << 16 | user32.GetDlgCtrlID(handle),
-                            handle)
+        user32.SendMessageW(
+            user32.GetParent(handle), MSG['WM_COMMAND'],
+            MSG['CBN_SELCHANGE'] << 16 | user32.GetDlgCtrlID(handle), handle)
         return self
 
     def switch_mkt(self, symbol: str, handle: int):
@@ -508,8 +549,7 @@ class Client:
         """
         index = self.mkt[0] if symbol.startswith(
             ('6', '5', '7', '11')) else self.mkt[1]
-        user32.SendMessageW(
-            handle, MSG['CB_SETCURSEL'], index, 0)
+        user32.SendMessageW(handle, MSG['CB_SETCURSEL'], index, 0)
         return self.switch_combo(handle)
 
     def switch_way(self, index):
