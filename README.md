@@ -1,9 +1,9 @@
 # 『扯线木偶』Puppet TraderAPI
-## 突破交易桎梏！
+### 突破交易桎梏！
 &nbsp;
-## puppet扯线木偶目前仅适用于独立交易端核新版(即THS)，需配合量化交易框架(hikyuu, quantaxis, rqalpha, vnpy, etc)使用。<br/>
-## 墙裂推荐使用实盘易，一站式量化交易解决方案 http://www.iguuu.com/e?x=19829 <br/>
-## 实现了和股票交易客户端相同的【买卖撤查】功能。暂不支持【融资融券】交易功能。
+#### puppet扯线木偶目前仅适用于独立交易端核新版(即THS)，需配合量化交易框架(hikyuu, quantaxis, rqalpha, vnpy, etc)使用。<br/>
+#### 墙裂推荐使用实盘易，一站式量化交易解决方案 http://www.iguuu.com/e?x=19829 <br/>
+#### 实现了和股票交易客户端相同的【买卖撤查】功能。暂不支持【融资融券】交易功能。
 **快速入门**
 ```python
 from puppet import Client
@@ -15,11 +15,11 @@ accinfo = {
     'client_path': 'path/to/xiadan.exe',
     'comm_pwd': '通讯密码'
 }  # comm_pwd 是可选参数
-acc = Client().login(*accinfo)
+acc = Client().login(**accinfo)
 
 # 绑定已登录账号
 title = '广发证券核新网上交易系统7.65'
-acc = Client().bind(title)
+acc = Client().bind(title).init()
 
 # 交易
 acc.buy('000001', 12.68, 100)
@@ -54,8 +54,11 @@ pip install /path/to/puppet-master.zip
 <br/>
 **已实现的功能：**
 
+make_heartbeat()  
+随机制造心跳
+
 login()  
-登录客户端(支持通讯密码或验证码)
+账户登入客户端(支持通讯密码或验证码)
 
 exit()  
 关闭客户端

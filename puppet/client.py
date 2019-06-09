@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.7.12"
+__version__ = "0.8.1"
 __license__ = 'MIT'
 
 import ctypes
@@ -14,6 +14,9 @@ import time
 import io
 import subprocess
 import re
+import random
+import threading
+
 from functools import reduce, lru_cache
 from collections import OrderedDict
 
@@ -47,7 +50,7 @@ class Client:
         'cancel': 163,
         'cancelable': 163,
         'cancel_order': 163,
-        'entrustment': 168,
+        'entrustment': 162,
         'trade': 512,
         'buy2': 512,
         'sell2': 512,
@@ -56,7 +59,7 @@ class Client:
         'position': 165,
         'market_value': 165,
         'assets': 165,
-        'deals': 167,
+        'deals': 162,
         'delivery_order': 176,
         'new': 554,
         'raffle': 554,
@@ -94,12 +97,14 @@ class Client:
     buf_length = 32
     client = '同花顺'
 
-    def __init__(self, arg=None):
+    def __init__(self, arg=None, enable_heartbeat=True):
         """
         :arg: 客户端标题(str)或客户端根句柄(int)
         """
-        self.prev = time.time()
         self.bind(arg)
+        self.heartbeat_stamp = time.time()
+        self.enable_heartbeat = enable_heartbeat
+        self.make_heartbeat()
 
     "Login"
 
@@ -312,10 +317,9 @@ class Client:
         print('Querying on-line...')
         self.switch(category)
         self.click_key({
-            'position': ord('W'),
-            # 'market_value': ord('W'),
-            'deals': ord('E')
-        }.get(category)).wait(0.5)
+            'deals': ord('E'),
+            'entrustment': ord('R')
+        }.get(category)).wait()  # 'position': ord('W'),
         if category in ('assets', 'balance', 'market_value'):
             for _ in range(10):
                 data = self._text(self.get_handle(category))
@@ -353,13 +357,13 @@ class Client:
                 self.get_handle('mkt')).startswith('上海') else (1, 0)
             self.idx = 0
             self.init()
-            return self.root
+            return self
 
     def visible(self, hwnd=None):
         return user32.IsWindowVisible(hwnd or self.root)
 
     def switch(self, name):
-        self.prev = time.time()
+        self.heartbeat_stamp = time.time()
         assert self.visible(), "客户端已关闭或账户已登出"
         node = name if isinstance(name, int) else self.NODE.get(name)
         if user32.SendMessageW(self.root, MSG['WM_COMMAND'], node, 0):
@@ -531,7 +535,7 @@ class Client:
                 text) if '合同编号' in text else (0, text)
 
     def refresh(self):
-        self.prev = time.time()
+        print('Refreshing page...')
         user32.PostMessageW(self.root, MSG['WM_COMMAND'], self.FRESH, 0)
         return self if self.visible() else False
 
@@ -567,3 +571,28 @@ class Client:
 
     def summary(self):
         return vars(self)
+
+    def make_heartbeat(self, time_interval=1680):
+        """2019-6-6 新增方法制造心跳
+        """
+
+        def refresh_page(time_interval):
+            while self.enable_heartbeat:
+                if not self.visible():
+                    print("OFFLINE!")
+                stamp = self.heartbeat_stamp
+                remainder = time_interval - (time.time() - stamp)
+                secs = random.uniform(remainder/2, remainder)
+                time.sleep(secs)
+
+                # 若在休眠期间心跳印记没被修改，则刷新页面并修改心跳印记
+                if stamp == self.heartbeat_stamp:
+                    # print('Making heartbeat...')
+                    self.refresh()
+                    self.heartbeat_stamp = time.time()
+
+        threading.Thread(
+            target=refresh_page,
+            kwargs={'time_interval': time_interval},
+            name='heartbeat',
+            daemon=True).start()
