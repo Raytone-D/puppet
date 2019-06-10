@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.1"
+__version__ = "0.8.2"
 __license__ = 'MIT'
 
 import ctypes
@@ -97,7 +97,7 @@ class Client:
     buf_length = 32
     client = '同花顺'
 
-    def __init__(self, arg=None, enable_heartbeat=True):
+    def __init__(self, arg=None, enable_heartbeat=True, copy_protection=False):
         """
         :arg: 客户端标题(str)或客户端根句柄(int)
         """
@@ -105,6 +105,7 @@ class Client:
         self.heartbeat_stamp = time.time()
         self.enable_heartbeat = enable_heartbeat
         self.make_heartbeat()
+        self.copy_protection = copy_protection
 
     "Login"
 
@@ -314,7 +315,7 @@ class Client:
         if category in ('account', 'mkt'):
             return self._text(self.get_handle('account'))
 
-        print('Querying on-line...')
+        print('Querying %s on-line...' % category)
         self.switch(category)
         self.click_key({
             'deals': ord('E'),
@@ -385,24 +386,33 @@ class Client:
     def copy_data(self, h_table: int):
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板"
         _replace = {'参考市值': '市值', '最新市值': '市值'}  # 兼容国金/平安"最新市值"、银河“参考市值”。
-        pyperclip.copy('nan')
-        user32.PostMessageW(h_table, MSG['WM_COMMAND'], MSG['COPY'], 0)
-        self.wait()
+        pyperclip.copy('')
 
-        # 关闭验证码弹窗
-        handle = user32.GetLastActivePopup(self.root)
-        if handle != self.root:
-            for _ in range(9):
-                self.wait(0.3)
-                if self.visible(handle):
-                    text = self.verify(self.grab(handle))
-                    hEdit = user32.FindWindowExW(handle, None, 'Edit', "")
-                    self.fill(text, hEdit).click_button(handle).wait(
-                        0.3)  # have to wait!
-                    break
+        for _ in range(9):
+            user32.PostMessageW(h_table, MSG['WM_COMMAND'], MSG['COPY'], 0)
+
+            # 关闭验证码弹窗
+            if self.copy_protection:
+                print('Removing copy protection...')
+                self.wait()  # have to
+                handle = user32.GetLastActivePopup(self.root)
+                if handle != self.root:
+                    for _ in range(9):
+                        self.wait(0.3)
+                        if self.visible(handle):
+                            text = self.verify(self.grab(handle))
+                            hEdit = user32.FindWindowExW(handle, None, 'Edit', "")
+                            self.fill(text, hEdit).click_button(
+                                handle).wait(0.3)  # have to wait!
+                            break
+
+            self.wait(0.1)
+            ret = pyperclip.paste().splitlines()
+            if ret:
+                break
+            self.wait(0.1)
 
         # 数据格式化
-        ret = pyperclip.paste().splitlines()
         temp = (x.split('\t') for x in ret)
         header = next(temp)
         for tag, value in _replace.items():
