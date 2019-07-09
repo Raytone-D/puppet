@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.2"
+__version__ = "0.8.3"
 __license__ = 'MIT'
 
 import ctypes
@@ -50,7 +50,7 @@ class Client:
         'cancel': 163,
         'cancelable': 163,
         'cancel_order': 163,
-        'entrustment': 162,
+        'entrustment': 168,
         'trade': 512,
         'buy2': 512,
         'sell2': 512,
@@ -59,7 +59,7 @@ class Client:
         'position': 165,
         'market_value': 165,
         'assets': 165,
-        'deals': 162,
+        'deals': 167,
         'delivery_order': 176,
         'new': 554,
         'raffle': 554,
@@ -82,7 +82,7 @@ class Client:
 
     ATTRS = ('account', 'balance', 'assets', 'position', 'market_value',
              'entrustment', 'cancelable', 'deals', 'new', 'bingo')
-    INIT = 'balance', 'buy', 'sell', 'cancel', 'assets'
+    INIT = 'position', 'buy', 'sell', 'cancel', 'deals', 'entrustment', 'assets'
     PAGE = 59648, 59649
     FRESH = 32790
     WAY = {
@@ -170,7 +170,7 @@ class Client:
                         return False
             return True
 
-        if not comm_pwd:
+        if comm_pwd is None:
             for _ in range(10):
                 self.wait(0.5)
                 comm_pwd = self.verify(self.grab(), ocr)
@@ -606,3 +606,6 @@ class Client:
             kwargs={'time_interval': time_interval},
             name='heartbeat',
             daemon=True).start()
+
+    def clear(self):
+        self.query.cache_clear()
