@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.3"
+__version__ = "0.8.4"
 __license__ = 'MIT'
 
 import ctypes
@@ -97,7 +97,7 @@ class Client:
     buf_length = 32
     client = '同花顺'
 
-    def __init__(self, arg=None, enable_heartbeat=True, copy_protection=False):
+    def __init__(self, arg=0, enable_heartbeat=True, copy_protection=False):
         """
         :arg: 客户端标题(str)或客户端根句柄(int)
         """
@@ -343,7 +343,7 @@ class Client:
         return "<%s(ver=%s client=%s root=%s)>" % (
             self.__class__.__name__, __version__, self.client, self.root)
 
-    def bind(self, arg=None):
+    def bind(self, arg=0):
         """"
         :arg: 客户端的标题或根句柄
         :mkt: 交易市场的索引值
