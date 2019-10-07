@@ -36,15 +36,16 @@ if __name__ == '__main__':
 
     # 绑定已经登录的交易客户端，广发证券客户端需要额外指定标题
     title = '广发证券核新网上交易系统7.65'
-    # quant = puppet.Client(title)
+    # acc = puppet.Client(title=title)
 
     # 自动登录交易客户端
-    quant = puppet.Client().login(**acc1).wait(2)
+    acc = puppet.login(acc1)
+    # 如果取持仓数据有验证码弹窗，设置 acc.copy_protection = True
 
     print(
-        vars(quant), '\n',
-        '余额:%s\n' % quant.balance,
-        '持仓市值:%s\n' % quant.market_value)
+        vars(acc), '\n',
+        '余额:%s\n' % acc.balance,
+        '持仓市值:%s\n' % acc.market_value)
 
-    quant.buy('510500', 4.688, 100)
-    quant.wait(2).cancel('510500')
+    acc.buy('510500', 4.688, 100)
+    acc.wait(2).cancel('510500')

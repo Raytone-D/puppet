@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.4"
+__version__ = "0.8.5"
 __license__ = 'MIT'
 
 import ctypes
@@ -19,11 +19,14 @@ import threading
 
 from functools import reduce, lru_cache
 from collections import OrderedDict
+from importlib import import_module
+
 
 try:
     import pyperclip
 except Exception as e:
     print("{}\n请先在命令行下运行：pip install pyperclip，再使用puppet！".format(e))
+
 
 MSG = {
     'WM_SETTEXT': 12,
@@ -40,6 +43,42 @@ MSG = {
 }
 
 user32 = ctypes.windll.user32
+
+curr_time = lambda : time.strftime('%F %X %a')
+
+
+def get_rect(obj_handle, ext_rate=0):
+    rect = ctypes.wintypes.RECT()
+    user32.GetWindowRect(obj_handle, ctypes.byref(rect))
+    user32.SetForegroundWindow(user32.GetParent(obj_handle))  # have to
+    return rect.left, rect.top, rect.right + (
+        rect.right - rect.left) * ext_rate, rect.bottom
+
+
+def grab(rect):
+    return import_module('PIL.ImageGrab').grab(rect)
+
+
+def image_to_string(image, token={
+    'appId': '11645803',
+    'apiKey': 'RUcxdYj0mnvrohEz6MrEERqz',
+    'secretKey': '4zRiYambxQPD1Z5HFh9VOoPXPK9AgBtZ'}):
+    if not isinstance(image, bytes):
+        buf = import_module('io').BytesIO()
+        image.save(buf, 'png')
+        image = buf.getvalue()
+    return import_module('aip').AipOcr(**token).basicGeneral(image).get(
+        'words_result')[0]['words']
+
+
+def get_text(obj_handle, num=32):
+    buf = ctypes.create_unicode_buffer(num)
+    user32.SendMessageW(obj_handle, MSG['WM_GETTEXT'], num, buf)
+    return buf.value
+
+
+def login(accinfos):
+    return Client(accinfos)
 
 
 class Client:
@@ -74,8 +113,8 @@ class Client:
         'market_value': (1014, ),
         'table': (1047, 200, 1047),
         'cancel_order': (3348, ),
-        'buy': (1032, 1541, 1033, 1018, 1034),
-        'sell': (1032, 1541, 1033, 1038, 1034),
+        'buy': (1032, 1541, 1033, 1018, 1034, 0),
+        'sell': (1032, 1541, 1033, 1038, 1034, 0),
         'buy2': (3451, 1032, 1541, 1033, 1018, 1034),
         'sell2': (3453, 1035, 1542, 1058, 1019, 1039)
     }  # 交易市场|证券代码|委托策略|买入价格|可买|买入数量
@@ -83,8 +122,10 @@ class Client:
     ATTRS = ('account', 'balance', 'assets', 'position', 'market_value',
              'entrustment', 'cancelable', 'deals', 'new', 'bingo')
     INIT = 'position', 'buy', 'sell', 'cancel', 'deals', 'entrustment', 'assets'
+    LOGIN = (1011, 1012, 1001, 1003, 1499)
     PAGE = 59648, 59649
     FRESH = 32790
+    QUOTE = 1024
     WAY = {
         0: "LIMIT              限价委托 沪深",
         1: "BEST5_OR_CANCEL    最优五档即时成交剩余撤销 沪深",
@@ -97,106 +138,63 @@ class Client:
     buf_length = 32
     client = '同花顺'
 
-    def __init__(self, arg=0, enable_heartbeat=True, copy_protection=False):
+    def __init__(self, accinfos={}, enable_heartbeat=True, copy_protection=False,
+        **kwargs):
         """
         :arg: 客户端标题(str)或客户端根句柄(int)
         """
-        self.bind(arg)
+        self.root = 0
+        if accinfos:
+            self.login(**accinfos)
+        elif kwargs:
+            self.bind(**kwargs)
         self.heartbeat_stamp = time.time()
         self.enable_heartbeat = enable_heartbeat
         self.make_heartbeat()
         self.copy_protection = copy_protection
 
-    "Login"
-
     def run(self, exe_path):
         assert 'xiadan' in subprocess.os.path.basename(exe_path).split('.')\
             and subprocess.os.path.exists(
                 exe_path), '客户端路径("%s")错误' % exe_path
-        print('{} 正在尝试运行客户端("{}")...'.format(
-            time.strftime('%Y-%m-%d %H:%M:%S %a'), exe_path))
-
-        self.pid = subprocess.Popen(exe_path).pid
-        pid = ctypes.c_ulong()
+        print(f'{curr_time()} 正在尝试运行客户端("{exe_path}")...')
+        pid = subprocess.Popen(exe_path).pid
+        text = ctypes.c_ulong()
         hwndChildAfter = None
-        counter = range(30)
-
-        for _ in counter:
-            self.wait()  # have to
-            # 用户登录窗口
-            hDlg = user32.FindWindowExW(None, hwndChildAfter, '#32770', None)
-            handle = user32.GetDlgItem(hDlg, 1011)  # ComboBox 0x3F3 1011
-            if handle:
-                user32.GetWindowThreadProcessId(hDlg, ctypes.byref(pid))
-                if pid.value == self.pid:
-                    break
-            hwndChildAfter = hDlg
-
-        for _ in counter:
-            self.wait()
-            if self.visible(hDlg):
-                print('{} 登录窗口准备就绪。'.format(
-                    time.strftime('%Y-%m-%d %H:%M:%S %a')))
-                break
-
-        self.hLogin = hDlg
-        self.path = exe_path
-        self.root = user32.GetParent(hDlg)
-
-    def login(self, account_no=None, password=None, comm_pwd=None,
-              client_path=None, ocr=None, **kwargs):
-        """ 重新登录或切换账户
-            account_no: 账号, str
-            password: 交易密码, str
-            comm_pwd: 通讯密码, str
-        """
-        start = time.time()
-        assert client_path, "交易客户端路径不能为空"
-        self.run(client_path)
-        print('{} 正在尝试登入交易服务器...'.format(
-            time.strftime('%Y-%m-%d %H:%M:%S %a')))
-        buf = ctypes.create_unicode_buffer(32)
-
-        @ctypes.WINFUNCTYPE(ctypes.c_long, ctypes.c_void_p, ctypes.c_wchar_p)
-        def match(handle, args):
-            if self.visible(handle):
-                user32.GetClassNameW(handle, buf, 32)
-                if buf.value == 'Edit':
-                    try:
-                        text = next(lparam)
-                        self.fill(text, handle).wait(0.1)
-                    except Exception:
-                        # print('登录信息填写完毕')
-                        return False
-            return True
-
-        if comm_pwd is None:
-            for _ in range(10):
-                self.wait(0.5)
-                comm_pwd = self.verify(self.grab(), ocr)
-                if len(comm_pwd) >= 4:
-                    break
-        lparam = [account_no, password, comm_pwd]
-        lparam = iter(lparam)
-        user32.EnumChildWindows(self.hLogin, match, None)
-        self.wait(0.5).click_button(self.hLogin, id_btn=1006)
-
         for _ in range(30):
-            res = self.capture()
-            if '暂停登录' in res or '通讯失败' in res:
-                raise Exception("%s \n木偶: '交易服务器维护，暂停登录，请稍后再试！'" % res)
-            if self.visible():
-                print("{} 已登入交易服务器。".format(
-                    time.strftime('%Y-%m-%d %H:%M:%S %a')))
-                self.birthtime = time.ctime()
-                self.acc = account_no
-                self.title = self.text(self.root)
-                self.elapsed = time.time() - start
-                # print('耗时:', self.elapsed )
-                self.init()
-                self.mkt = (0, 1) if self._text(
-                    self.get_handle('mkt')).startswith('上海') else (1, 0)
-                return self
+            self.wait()
+            login_h = user32.FindWindowExW(None, hwndChildAfter, '#32770', None)
+            combobox_h = user32.GetDlgItem(login_h, 1011)  # ComboBox 0x3F3 1011
+            if combobox_h:
+                user32.GetWindowThreadProcessId(login_h, ctypes.byref(text))
+                if text.value == pid:
+                    self._page = login_h
+                    self.login_h = login_h
+                    break
+            hwndChildAfter = login_h
+        [self.wait() for _ in range(9) if not self.visible(login_h)]
+        *self._handles, h1, h2, self._IMG = [user32.GetDlgItem(
+            self._page, i) for i in self.LOGIN]
+        self._handles.append(h2 if self.visible(h2) else h1)
+        self.root = user32.GetParent(login_h)
+        print(f'{curr_time()} 登录界面准备就绪。')
+
+    def login(self, account_no: str ='', password: str ='', comm_pwd: str ='',
+        client_path: str=''):
+        self.run(client_path)
+        print(f'{curr_time()} 正在登录交易服务器...')
+        self.fill_and_submit(account_no, password, comm_pwd or image_to_string(
+            grab(get_rect(self._IMG))))
+        # self.capture()
+        if self.visible(times=20):
+            self.account_no = account_no
+            self.password = password
+            self.comm_pwd = comm_pwd
+            self.mkt = (0, 1) if get_text(self.get_handle('mkt')).startswith(
+                '上海') else (1, 0)
+            print(f'{curr_time()} 已登入交易服务器。')
+            self.init()
+            return self
 
     def exit(self):
         "退出系统并关闭程序"
@@ -205,7 +203,14 @@ class Client:
         print("已退出客户端!")
         return self
 
-    "Trade"
+    def fill_and_submit(self, *args):
+        user32.SetForegroundWindow(self._page)
+        for text, handle in zip(args, self._handles):
+            self.fill(text, handle)
+            self.wait(0.1)
+        self.wait(0.2)
+        self.click_button(btn_id=1006)
+        return self
 
     def trade(self, action, symbol, arg, qty):
         """下单
@@ -240,10 +245,10 @@ class Client:
         }[action])
 
     def buy(self, symbol, arg, qty):
-        return self.trade('buy', symbol, arg, qty).answer()
+        return self.trade('buy', symbol, arg, qty).wait().answer()
 
     def sell(self, symbol, arg, qty):
-        return self.trade('sell', symbol, arg, qty).answer()
+        return self.trade('sell', symbol, arg, qty).wait().answer()
 
     def cancel(self, symbol=None, action='cancel_all'):
         return self.cancel_order(symbol, action)
@@ -262,7 +267,7 @@ class Client:
             self.fill(symbol, editor)
             for _ in range(10):
                 self.wait(0.3).click_button(label='查询代码')
-                hButton = user32.FindWindowExW(self.page, 0, 'Button', '撤单')
+                hButton = user32.FindWindowExW(self._page, 0, 'Button', '撤单')
                 if user32.IsWindowEnabled(hButton):  # 撤单按钮的状态检查
                     break
         return self.click_button(
@@ -343,13 +348,16 @@ class Client:
         return "<%s(ver=%s client=%s root=%s)>" % (
             self.__class__.__name__, __version__, self.client, self.root)
 
-    def bind(self, arg=0):
+    def bind(self, arg='', **kwargs):
         """"
         :arg: 客户端的标题或根句柄
         :mkt: 交易市场的索引值
         """
-        self.root = arg if isinstance(arg, int) else user32.FindWindowW(
-            0, arg or '网上股票交易系统5.0')
+        if 'title' in kwargs or isinstance(arg, str):
+            self.root = user32.FindWindowW(0, kwargs.get('title') or (
+                arg or '网上股票交易系统5.0'))
+        elif 'root' in kwargs or isinstance(arg, int):
+            self.root = kwargs.get('root') or arg
         if self.visible(self.root):
             self.birthtime = time.ctime()
             self.acc = self.account
@@ -360,15 +368,20 @@ class Client:
             self.init()
             return self
 
-    def visible(self, hwnd=None):
-        return user32.IsWindowVisible(hwnd or self.root)
+    def visible(self, hwnd=None, times=0):
+        for _ in range(times or 1):
+            val = user32.IsWindowVisible(hwnd or self.root)
+            if val:
+                return True
+            elif times > 0:
+                self.wait()
 
     def switch(self, name):
         self.heartbeat_stamp = time.time()
         assert self.visible(), "客户端已关闭或账户已登出"
         node = name if isinstance(name, int) else self.NODE.get(name)
         if user32.SendMessageW(self.root, MSG['WM_COMMAND'], node, 0):
-            self.page = reduce(user32.GetDlgItem, self.PAGE, self.root)
+            self._page = reduce(user32.GetDlgItem, self.PAGE, self.root)
             return self
 
     def init(self):
@@ -376,7 +389,7 @@ class Client:
             self.switch(name).wait(0.3)
 
         user32.ShowOwnedPopups(self.root, False)
-        print("{} 木偶准备就绪！".format(time.strftime('%Y-%m-%d %H:%M:%S %a')))
+        print(f"{curr_time()} 木偶准备就绪！")
         return self
 
     def wait(self, timeout=0.5):
@@ -429,11 +442,11 @@ class Client:
         self.switch(action)
         m = self.MEMBERS.get(action, self.MEMBERS['table'])
         if action in ('buy', 'buy2', 'sell', 'sell2'):
-            data = [user32.GetDlgItem(self.page, i) for i in m]
+            data = [user32.GetDlgItem(self._page, i) for i in m]
         else:
             data = reduce(
                 user32.GetDlgItem, m,
-                self.root if action in ('account', 'mkt') else self.page)
+                self.root if action in ('account', 'mkt') else self._page)
         return data
 
     def text(self, obj, key=0):
@@ -448,7 +461,7 @@ class Client:
     def _text(self, h_text=None, id_text=None):
         buf = ctypes.create_unicode_buffer(64)
         if id_text:
-            user32.SendDlgItemMessageW(self.page, id_text, MSG['WM_GETTEXT'],
+            user32.SendDlgItemMessageW(self._page, id_text, MSG['WM_GETTEXT'],
                                        64, buf)
         else:
             user32.SendMessageW(h_text or next(self.members),
@@ -456,7 +469,6 @@ class Client:
         return buf.value
 
     def fill(self, text, h_edit=None, h_dialog=None, id_edit=None):
-        "fill in"
         h_edit = h_edit or next(self.members)
         if text:
             text = str(text)
@@ -467,18 +479,18 @@ class Client:
                                            MSG['WM_SETTEXT'], 0, text)
         return self
 
-    def click_button(self, h_dialog=None, label='确定', id_btn=None):
-        h_dialog = h_dialog or self.page
-        if not id_btn:
-            h_btn = user32.FindWindowExW(h_dialog, 0, 'Button', label)
-            id_btn = user32.GetDlgCtrlID(h_btn)
-        user32.PostMessageW(h_dialog, MSG['WM_COMMAND'], id_btn, 0)
+    def click_button(self, h_dialog=None, label=None, btn_id=None):
+        h_dialog = h_dialog or self._page
+        if not btn_id:
+            btn_h = user32.FindWindowExW(h_dialog, 0, 'Button', label)
+            btn_id = user32.GetDlgCtrlID(btn_h)
+        user32.PostMessageW(h_dialog, MSG['WM_COMMAND'], btn_id, 0)
         return self
 
     def click_key(self, keyCode, param=0):  # 单击按键
         if keyCode:
-            user32.PostMessageW(self.page, MSG['WM_KEYDOWN'], keyCode, param)
-            user32.PostMessageW(self.page, MSG['WM_KEYUP'], keyCode, param)
+            user32.PostMessageW(self._page, MSG['WM_KEYDOWN'], keyCode, param)
+            user32.PostMessageW(self._page, MSG['WM_KEYUP'], keyCode, param)
         return self
 
     def grab(self, hParent=None):
@@ -524,8 +536,9 @@ class Client:
         for _ in range(10):
             self.wait(0.1)
             hPopup = user32.GetLastActivePopup(root)
-            if hPopup != root and self.visible(hPopup):
+            if hPopup != root:  # and self.visible(hPopup):
                 hTips = user32.FindWindowExW(hPopup, 0, 'Static', None)
+                print(hex(hPopup).upper(), hex(hTips).upper())
                 user32.SendMessageW(hTips, MSG['WM_GETTEXT'], 64, buf)
                 hButton = user32.FindWindowExW(hPopup, 0, 'Button', label)
                 if not hButton:
@@ -538,6 +551,7 @@ class Client:
 
     def answer(self):
         text = self.capture()
+        print(text)
         if any(('小数部分' in text, )):
             print(text)
             text = self.capture()
@@ -609,3 +623,21 @@ class Client:
 
     def clear(self):
         self.query.cache_clear()
+
+    def quote(self, codes, df_first=True):
+        """get latest deal price"""
+        self.switch('sell')
+        code_h, *_, page_h = self.get_handle('sell')
+        handle = user32.GetDlgItem(page_h, self.QUOTE)
+        names = ['code', 'price']
+        if isinstance(codes, str):
+            codes = [codes]
+        def _quote(code: str) -> float:
+            self.fill(code, code_h).wait(0.1)
+            return float(get_text(handle))
+        data = [(code, _quote(code)) for code in codes]
+        if df_first:
+            if not hasattr(self, 'pd'):
+                self.pd = import_module('pandas')
+            data = self.pd.DataFrame(data, columns=names)
+        return data
