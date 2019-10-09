@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.5"
+__version__ = "0.8.6"
 __license__ = 'MIT'
 
 import ctypes
@@ -634,7 +634,11 @@ class Client:
             codes = [codes]
         def _quote(code: str) -> float:
             self.fill(code, code_h).wait(0.1)
-            return float(get_text(handle))
+            for _ in range(5):
+                text = get_text(handle)
+                if text != '-':
+                    return float(text)
+                self.wait(0.1)
         data = [(code, _quote(code)) for code in codes]
         if df_first:
             if not hasattr(self, 'pd'):
