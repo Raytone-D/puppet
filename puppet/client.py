@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.6"
+__version__ = "0.8.7"
 __license__ = 'MIT'
 
 import ctypes
@@ -95,6 +95,7 @@ class Client:
         'sell2': 512,
         'account': 165,
         'balance': 165,
+        'free_bal': 165,
         'position': 165,
         'market_value': 165,
         'assets': 165,
@@ -109,6 +110,7 @@ class Client:
         'account': (59392, 0, 1711),
         'mkt': (59392, 0, 1003),
         'balance': (1012, ),
+        'free_bal': (1016,),
         'assets': (1015, ),
         'market_value': (1014, ),
         'table': (1047, 200, 1047),
@@ -119,7 +121,7 @@ class Client:
         'sell2': (3453, 1035, 1542, 1058, 1019, 1039)
     }  # 交易市场|证券代码|委托策略|买入价格|可买|买入数量
 
-    ATTRS = ('account', 'balance', 'assets', 'position', 'market_value',
+    ATTRS = ('account', 'balance', 'free_bal', 'assets', 'position', 'market_value',
              'entrustment', 'cancelable', 'deals', 'new', 'bingo')
     INIT = 'position', 'buy', 'sell', 'cancel', 'deals', 'entrustment', 'assets'
     LOGIN = (1011, 1012, 1001, 1003, 1499)
@@ -326,7 +328,7 @@ class Client:
             'deals': ord('E'),
             'entrustment': ord('R')
         }.get(category)).wait()  # 'position': ord('W'),
-        if category in ('assets', 'balance', 'market_value'):
+        if category in ('assets', 'balance', 'free_bal', 'market_value'):
             for _ in range(10):
                 data = self._text(self.get_handle(category))
                 if data:
