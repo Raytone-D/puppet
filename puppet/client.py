@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.7"
+__version__ = "0.8.8"
 __license__ = 'MIT'
 
 import ctypes
@@ -16,10 +16,14 @@ import subprocess
 import re
 import random
 import threading
+import winreg
+import os
+import csv
 
 from functools import reduce, lru_cache
 from collections import OrderedDict
 from importlib import import_module
+from contextlib import contextmanager
 
 
 try:
@@ -45,6 +49,10 @@ MSG = {
 user32 = ctypes.windll.user32
 
 curr_time = lambda : time.strftime('%F %X %a')
+
+
+def login(accinfos):
+    return Client(accinfos)
 
 
 def get_rect(obj_handle, ext_rate=0):
@@ -77,8 +85,50 @@ def get_text(obj_handle, num=32):
     return buf.value
 
 
-def login(accinfos):
-    return Client(accinfos)
+def lacate_folder(name='Personal'):
+    """Personal Recent
+    """
+    key = winreg.OpenKey(winreg.HKEY_CURRENT_USER,
+        r'Software\Microsoft\Windows\CurrentVersion\Explorer\Shell Folders')
+    return winreg.QueryValueEx(key, name)[0]  # dir, type
+
+
+def wait_for_popup():
+    buf = ctypes.create_unicode_buffer(64)
+    for _ in range(9):
+        hwnd = user32.GetForegroundWindow()
+        user32.GetWindowTextW(hwnd, buf, 64)
+        if buf.value == '另存为' and user32.IsWindowVisible(hwnd):
+            break
+        time.sleep(0.2)
+
+
+def simulate_shortcuts(key1, key2=None):
+    KEYEVENTF_KEYUP = 2
+    scan1 = user32.MapVirtualKeyW(key1, 0)
+    user32.keybd_event(key1, scan1, 0, 0)
+    if key2:
+        scan2 = user32.MapVirtualKeyW(key2, 0)
+        user32.keybd_event(key2, scan2, 0, 0)
+        user32.keybd_event(key2, scan2, KEYEVENTF_KEYUP, 0)
+    user32.keybd_event(key1, scan1, KEYEVENTF_KEYUP, 0)
+
+
+@contextmanager
+def export_data(path: str):
+    VK_CONTROL = 17
+    VK_ALT = 18
+    VK_S = 83
+    simulate_shortcuts(VK_CONTROL, VK_S)  # 保存 Ctrl+S
+    wait_for_popup()
+    simulate_shortcuts(VK_ALT, VK_S)  # 保存 Alt+S 或 回车键
+    [time.sleep(0.1) for _ in range(9) if not os.path.isfile(path)]
+    with open(path) as f:
+        rows = f.readlines()
+    yield rows
+    if os.path.isfile(path):
+        # print(f'Remove {path}')
+        os.remove(path)
 
 
 class Client:
@@ -154,6 +204,10 @@ class Client:
         self.enable_heartbeat = enable_heartbeat
         self.make_heartbeat()
         self.copy_protection = copy_protection
+        path = f'{lacate_folder()}\\table.xls'
+        if os.path.isfile(path):
+            # print(f'Remove {path}')
+            os.remove(path)
 
     def run(self, exe_path):
         assert 'xiadan' in subprocess.os.path.basename(exe_path).split('.')\
@@ -312,13 +366,13 @@ class Client:
 
     "Query"
 
-    @lru_cache(64)
+    @lru_cache()
     def query(self, category):
-        """
+        """realtime trading data
         2019-5-19 加入数据缓存功能
         """
         if category not in self.ATTRS:
-            raise AttributeError(category)
+            data = 'UNDEFINED'
         if category in ('account', 'mkt'):
             return self._text(self.get_handle('account'))
 
@@ -337,8 +391,16 @@ class Client:
                 else:
                     self.wait(0.2)
 
-        else:
-            data = self.copy_data(self.get_handle(category))
+        else:  # data sheet
+            path = f'{lacate_folder()}\\table.xls'
+            if user32.IsIconic(self.root):
+                # print('最小化')
+                user32.ShowWindow(self.root, 9)
+            user32.SetForegroundWindow(self.root)
+            [self.wait(0.1) for _ in range(20) if user32.GetForegroundWindow() != self.root]
+            with export_data(path) as rows:
+                data = list(csv.DictReader(rows, delimiter='\t'))
+            # data = self.copy_data(self.get_handle(category))
         return data
 
     def __getattr__(self, attrname):
@@ -436,7 +498,7 @@ class Client:
                 header.remove(tag)
         return [OrderedDict(zip(header, x)) for x in temp]
 
-    @lru_cache(maxsize=64)
+    @lru_cache()
     def get_handle(self, action: str):
         """
         :action: 操作标识符
