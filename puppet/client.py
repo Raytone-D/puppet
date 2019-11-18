@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.8"
+__version__ = "0.8.9"
 __license__ = 'MIT'
 
 import ctypes
@@ -122,9 +122,15 @@ def export_data(path: str):
     simulate_shortcuts(VK_CONTROL, VK_S)  # 保存 Ctrl+S
     wait_for_popup()
     simulate_shortcuts(VK_ALT, VK_S)  # 保存 Alt+S 或 回车键
-    [time.sleep(0.1) for _ in range(9) if not os.path.isfile(path)]
-    with open(path) as f:
-        rows = f.readlines()
+    # [time.sleep(0.1) for _ in range(9) if not os.path.isfile(path)]
+    for _ in range(9):
+        time.sleep(0.1)
+        try:
+            with open(path) as f:
+                rows = f.readlines()
+            break
+        except Exception as e:
+            print(e)
     yield rows
     if os.path.isfile(path):
         # print(f'Remove {path}')
