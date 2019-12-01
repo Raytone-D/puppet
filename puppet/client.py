@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.10"
+__version__ = "0.8.11"
 __license__ = 'MIT'
 
 import ctypes
@@ -143,6 +143,9 @@ class Client:
         'buy': 161,
         'sell': 162,
         'cancel': 163,
+        'cancel_all': 163,
+        'cancel_buy': 163,
+        'cancel_sell': 163,
         'cancelable': 163,
         'cancel_order': 163,
         'entrustment': 168,
@@ -159,28 +162,30 @@ class Client:
         'delivery_order': 176,
         'new': 554,
         'raffle': 554,
+        'reverse_repo': 717,
         'batch': 5170,
         'bingo': 1070
     }
-    MEMBERS = {
-        'account': (59392, 0, 1711),
-        'mkt': (59392, 0, 1003),
-        'balance': (1012, ),
-        'free_bal': (1016,),
-        'assets': (1015, ),
-        'market_value': (1014, ),
-        'table': (1047, 200, 1047),
-        'cancel_order': (3348, ),
-        'buy': (1032, 1541, 1033, 1018, 1034, 0),
-        'sell': (1032, 1541, 1033, 1038, 1034, 0),
-        'buy2': (3451, 1032, 1541, 1033, 1018, 1034),
-        'sell2': (3453, 1035, 1542, 1058, 1019, 1039)
-    }  # 交易市场|证券代码|委托策略|买入价格|可买|买入数量
 
     ATTRS = ('account', 'balance', 'free_bal', 'assets', 'position', 'market_value',
              'entrustment', 'cancelable', 'deals', 'new', 'bingo')
     INIT = 'position', 'buy', 'sell', 'cancel', 'deals', 'entrustment', 'assets'
     LOGIN = (1011, 1012, 1001, 1003, 1499)
+    ACCOUNT = (59392, 0, 1711)
+    MKT = (59392, 0, 1003)
+    BALANCE = (1012,)
+    FREE_BAL = (1016,)
+    ASSETS = (1015,)
+    MARKET_VALUE = (1014, )
+    TABLE = (1047, 200, 1047)
+    CANCEL_ORDER = (3348, )
+    # symbol, price, max_qty, qty, quote
+    BUY = (1032, 1033, 1034, 0, 1018)
+    SELL = (1032, 1033, 1034, 0, 1038)
+    REVERSE_REPO = (1032, 1033, 1034, 0, 1018)
+    BUY2 = (3451, 1032, 1541, 1033, 1018, 1034)
+    SELL2 = (3453, 1035, 1542, 1058, 1019, 1039)
+    CANCEL = (3348,)
     PAGE = 59648, 59649
     FRESH = 32790
     QUOTE = 1024
@@ -265,17 +270,23 @@ class Client:
         print("已退出客户端!")
         return self
 
-    def fill_and_submit(self, *args):
+    def fill_and_submit(self, *args, delay=0.1, label=''):
         user32.SetForegroundWindow(self._page)
         for text, handle in zip(args, self._handles):
             self.fill(text, handle)
-            self.wait(0.1)
-        self.wait(0.2)
-        self.click_button(btn_id=1006)
+            if delay:
+                for _ in range(9):
+                    max_qty = self._text(self._handles[-1])
+                    if max_qty not in ('', '0'):
+                        break
+                    self.wait(delay)
+        self.wait(0.1)
+        self.click_button(label)
         return self
 
-    def trade(self, action, symbol, arg, qty):
+    def trade(self, action: str, symbol: str ='', *args, delay: float =0.1):
         """下单
+        客户端->系统->交易设置->默认买入价格(数量): 空、默认卖出价格(数量):空
         :action: str, 交易方式; "buy2"或"sell2", 'margin'
         :symbol: str, 证券代码; 例如'000001', "510500"
         :arg: float or str of float, 判断为委托价格，int判断为委托策略, 例如'3.32', 3.32, 1
@@ -291,35 +302,40 @@ class Client:
             5 ALL_OR_CANCEL      全额成交或撤销 深圳
         """
         self.switch(action)
-        mkt = self.get_handle('mkt')
-        self.members = iter(self.get_handle(action))
-        price = None if isinstance(arg, int) else arg
+        if action in ('buy', 'sell', 'reverse_repo'):
+            self.switch_mkt(symbol, self.get_handle('mkt'))
+        self._handles = self.get_handle(action)
+        label = {'cancel_all': '全撤(Z /)',
+                 'cancel_buy': '撤买(X)',
+                 'cancel_sell': '撤卖(C)'}.get(action)
+        if action in ('cancel', 'cancel_all', 'cancel_buy', 'cancel_sell'):
+            data = self.query('cancelable')
+            if not data:
+                self.wait()
+        return self.fill_and_submit(symbol, *args, delay=delay, label=label).wait().answer()
+        # return self.fill(qty or full).click_button(label={'buy': '买入[B]','sell': '卖出[S]','reverse_repo': '确定'}[action])
 
-        self.switch_mkt(
-            symbol,
-            mkt).fill(symbol).wait(0.2).switch_way(arg).wait().fill(price)
-        full = self._text()
-        return self.fill(qty or full).click_button(label={
-            'buy': '买入[B]',
-            'sell': '卖出[S]'
-        }[action])
+    def buy(self, symbol: str, arg, qty: int) -> tuple:
+        return self.trade('buy', symbol, arg, qty)
 
-    def buy(self, symbol, arg, qty):
-        return self.trade('buy', symbol, arg, qty).wait().answer()
+    def sell(self, symbol: str, arg, qty: int) -> tuple:
+        return self.trade('sell', symbol, arg, qty)
 
-    def sell(self, symbol, arg, qty):
-        return self.trade('sell', symbol, arg, qty).wait().answer()
+    def reverse_repo(self, symbol: str, price: float, qty: int, delay=0.2) -> tuple:
+        """逆回购 R-001 SZ '131810'; GC001 SH '204001' """
+        return self.trade('reverse_repo', symbol, price, qty, delay=delay)
 
-    def cancel(self, symbol=None, action='cancel_all'):
-        return self.cancel_order(symbol, action)
+    def cancel_all(self) -> tuple:  # 全撤
+        return self.trade('cancel_all')
 
-    def cancel_order(self, symbol=None, choice='cancel_all'):
-        """ 撤单
+    def cancel_buy(self) -> tuple: # 撤买
+        return self.trade('cancel_buy')
 
-        :choice: str, 可选“cancel_buy”、“cancel_sell”或"cancel"。
-        "cancel"是撤销指定股票symbol的全部委托。
-        """
-        self.switch('cancel_order').wait(0.5)  # have to
+    def cancel_sell(self) -> tuple: # 撤卖
+        return self.trade('cancel_sell')
+
+    def cancel(self, symbol='') -> tuple:
+        self.switch('cancel_order').wait(1)  # have to
         editor = self.get_handle('cancel_order')
         if isinstance(symbol, str):
             self.fill(symbol, editor)
@@ -328,22 +344,7 @@ class Client:
                 hButton = user32.FindWindowExW(self._page, 0, 'Button', '撤单')
                 if user32.IsWindowEnabled(hButton):  # 撤单按钮的状态检查
                     break
-        return self.click_button(
-            label={
-                'cancel': '撤单',
-                'cancel_all': '全撤(Z /)',
-                'cancel_buy': '撤买(X)',
-                'cancel_sell': '撤卖(C)'
-            }[choice]).answer()
-
-    def cancel_all(self):  # 全撤
-        return self.cancel_order()
-
-    def cancel_buy(self):  # 撤买
-        return self.cancel_order(choice='cancel_buy')
-
-    def cancel_sell(self):  # 撤卖
-        return self.cancel_order(choice='cancel_sell')
+        return self.click_button(label='撤单').answer()
 
     def raffle(self):
         "新股申购"
@@ -363,8 +364,6 @@ class Client:
         target = self.new
         if target:
             return [func(ipo) for ipo in target]
-
-    "Query"
 
     def query(self, category):
         """realtime trading data
@@ -461,6 +460,7 @@ class Client:
 
     def copy_data(self, h_table: int):
         "将CVirtualGridCtrl|Custom<n>的数据复制到剪贴板"
+        # 代码失效，等待移除。
         _replace = {'参考市值': '市值', '最新市值': '市值'}  # 兼容国金/平安"最新市值"、银河“参考市值”。
         pyperclip.copy('')
 
@@ -479,7 +479,7 @@ class Client:
                             text = self.verify(self.grab(handle))
                             hEdit = user32.FindWindowExW(handle, None, 'Edit', "")
                             self.fill(text, hEdit).click_button(
-                                handle).wait(0.3)  # have to wait!
+                                h_dialog=handle).wait(0.3)  # have to wait!
                             break
 
             self.wait(0.1)
@@ -502,9 +502,11 @@ class Client:
         """
         :action: 操作标识符
         """
+        if action in ('cancel_all', 'cancel_buy', 'cancel_sell'):
+            action = 'cancel'
         self.switch(action)
-        m = self.MEMBERS.get(action, self.MEMBERS['table'])
-        if action in ('buy', 'buy2', 'sell', 'sell2'):
+        m = getattr(self, action.upper(), self.TABLE)
+        if action in ('buy', 'buy2', 'sell', 'sell2', 'reverse_repo', 'cancel'):
             data = [user32.GetDlgItem(self._page, i) for i in m]
         else:
             data = reduce(
@@ -542,9 +544,9 @@ class Client:
                                            MSG['WM_SETTEXT'], 0, text)
         return self
 
-    def click_button(self, h_dialog=None, label=None, btn_id=None):
+    def click_button(self, label='', btn_id=1006, h_dialog=None):
         h_dialog = h_dialog or self._page
-        if not btn_id:
+        if label:
             btn_h = user32.FindWindowExW(h_dialog, 0, 'Button', label)
             btn_id = user32.GetDlgCtrlID(btn_h)
         user32.PostMessageW(h_dialog, MSG['WM_COMMAND'], btn_id, 0)
@@ -592,7 +594,7 @@ class Client:
             r = False
         return r
 
-    def capture(self, root=None, label='确定'):
+    def capture(self, root=None, label=''):
         """ 捕捉弹窗的文本内容 """
         buf = ctypes.create_unicode_buffer(64)
         root = root or self.root
@@ -601,23 +603,25 @@ class Client:
             hPopup = user32.GetLastActivePopup(root)
             if hPopup != root:  # and self.visible(hPopup):
                 hTips = user32.FindWindowExW(hPopup, 0, 'Static', None)
-                print(hex(hPopup).upper(), hex(hTips).upper())
+                # print(hex(hPopup).upper(), hex(hTips).upper())
+                hwndChildAfter = None
+                for _ in range(9):
+                    hButton = user32.FindWindowExW(hPopup, hwndChildAfter, 'Button', 0)
+                    user32.SendMessageW(hButton, MSG['WM_GETTEXT'], 64, buf)
+                    if buf.value in ('是(&Y)', '确定'):
+                        label = buf.value
+                        break
+                    hwndChildAfter = hButton
                 user32.SendMessageW(hTips, MSG['WM_GETTEXT'], 64, buf)
-                hButton = user32.FindWindowExW(hPopup, 0, 'Button', label)
-                if not hButton:
-                    label = '是(&Y)'
-                    hButton = user32.FindWindowExW(hPopup, 0, 'Button', label)
-                self.click_button(hPopup, label=label)
+                self.click_button(label, h_dialog=hPopup)
                 break
         text = buf.value
-        return text if text else '木偶:"没有回应"'
+        return text if text else '委托成功后是否弹出提示对话框：否'
 
     def answer(self):
         text = self.capture()
-        print(text)
-        if any(('小数部分' in text, )):
-            print(text)
-            text = self.capture()
+        if any(('年化收益率' in text, '小数部分' in text)):
+            text = f'{text} {self.capture()}'
         return (re.findall(r'(\w*[0-9]+)\w*', text)[0],
                 text) if '合同编号' in text else (0, text)
 
@@ -684,12 +688,8 @@ class Client:
             name='heartbeat',
             daemon=True).start()
 
-    def clear(self):
-        """clear window handle cache"""
-        self.get_handle.cache_clear()
-
     def quote(self, codes, df_first=True):
-        """get latest deal price"""
+        """有bug未修复！ get latest deal price"""
         self.switch('sell')
         code_h, *_, page_h = self.get_handle('sell')
         handle = user32.GetDlgItem(page_h, self.QUOTE)
