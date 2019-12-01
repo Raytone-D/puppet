@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.9"
+__version__ = "0.8.10"
 __license__ = 'MIT'
 
 import ctypes
@@ -290,8 +290,6 @@ class Client:
             4 BEST5_OR_CANCEL    最优五档即时成交剩余撤销 深圳
             5 ALL_OR_CANCEL      全额成交或撤销 深圳
         """
-        self.query.cache_clear()
-
         self.switch(action)
         mkt = self.get_handle('mkt')
         self.members = iter(self.get_handle(action))
@@ -321,8 +319,6 @@ class Client:
         :choice: str, 可选“cancel_buy”、“cancel_sell”或"cancel"。
         "cancel"是撤销指定股票symbol的全部委托。
         """
-        self.query.cache_clear()
-
         self.switch('cancel_order').wait(0.5)  # have to
         editor = self.get_handle('cancel_order')
         if isinstance(symbol, str):
@@ -351,8 +347,6 @@ class Client:
 
     def raffle(self):
         "新股申购"
-        self.query.cache_clear()
-
         def func(ipo):
             symbol = ipo.get('新股代码') or ipo.get('证券代码')
             price = ipo.get('申购价格') or ipo.get('发行价格')
@@ -372,7 +366,6 @@ class Client:
 
     "Query"
 
-    @lru_cache()
     def query(self, category):
         """realtime trading data
         2019-5-19 加入数据缓存功能
@@ -692,7 +685,8 @@ class Client:
             daemon=True).start()
 
     def clear(self):
-        self.query.cache_clear()
+        """clear window handle cache"""
+        self.get_handle.cache_clear()
 
     def quote(self, codes, df_first=True):
         """get latest deal price"""
