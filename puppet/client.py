@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.11"
+__version__ = "0.8.12"
 __license__ = 'MIT'
 
 import ctypes
@@ -178,6 +178,7 @@ class Client:
     ASSETS = (1015,)
     MARKET_VALUE = (1014, )
     TABLE = (1047, 200, 1047)
+    MONEY = (1308, 200, 1308)
     CANCEL_ORDER = (3348, )
     # symbol, price, max_qty, qty, quote
     BUY = (1032, 1033, 1034, 0, 1018)
@@ -215,10 +216,11 @@ class Client:
         self.enable_heartbeat = enable_heartbeat
         self.make_heartbeat()
         self.copy_protection = copy_protection
-        path = f'{lacate_folder()}\\table.xls'
-        if os.path.isfile(path):
+        dirname = kwargs.get('dirname') or lacate_folder()
+        self.filename = f'{dirname}\\table.xls'
+        if os.path.isfile(self.filename):
             # print(f'Remove {path}')
-            os.remove(path)
+            os.remove(self.filename)
 
     def run(self, exe_path):
         assert 'xiadan' in subprocess.os.path.basename(exe_path).split('.')\
@@ -390,13 +392,12 @@ class Client:
                     self.wait(0.2)
 
         else:  # data sheet
-            path = f'{lacate_folder()}\\table.xls'
             if user32.IsIconic(self.root):
                 # print('最小化')
                 user32.ShowWindow(self.root, 9)
             user32.SetForegroundWindow(self.root)
             [self.wait(0.1) for _ in range(20) if user32.GetForegroundWindow() != self.root]
-            with export_data(path) as rows:
+            with export_data(self.filename) as rows:
                 data = list(csv.DictReader(rows, delimiter='\t'))
             # data = self.copy_data(self.get_handle(category))
         return data
