@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.13"
+__version__ = "0.8.14"
 __license__ = 'MIT'
 
 import ctypes
@@ -27,9 +27,11 @@ from contextlib import contextmanager
 
 
 try:
-    import pyperclip
+    # import pyperclip
+    import pandas as pd
 except Exception as e:
-    print("{}\n请先在命令行下运行：pip install pyperclip，再使用puppet！".format(e))
+    # print("{}\n请先在命令行下运行：pip install pyperclip，再使用puppet！".format(e))
+    print(e)
 
 
 MSG = {
@@ -119,19 +121,24 @@ def export_data(path: str):
     VK_CONTROL = 17
     VK_ALT = 18
     VK_S = 83
-    simulate_shortcuts(VK_CONTROL, VK_S)  # 保存 Ctrl+S
-    wait_for_popup()
-    simulate_shortcuts(VK_ALT, VK_S)  # 保存 Alt+S 或 回车键
-    # [time.sleep(0.1) for _ in range(9) if not os.path.isfile(path)]
-    for _ in range(9):
-        time.sleep(0.1)
+    for _ in range(99):
+        simulate_shortcuts(VK_CONTROL, VK_S)  # 右键保存 Ctrl+S
+        wait_for_popup()
+        simulate_shortcuts(VK_ALT, VK_S)  # 按钮保存 Alt+S 或 回车键
+        [time.sleep(0.05) for _ in range(99) if not os.path.isfile(path)]
+        # time.sleep(0.1)
         try:
             with open(path) as f:
-                rows = f.readlines()
-            break
+                string = f.read()
+            if string:
+                break
+            else:
+                # print('fuck...')
+                os.remove(path)
         except Exception as e:
             print(e)
-    yield rows
+            time.sleep(0.05)
+    yield string
     if os.path.isfile(path):
         # print(f'Remove {path}')
         os.remove(path)
@@ -394,8 +401,15 @@ class Client:
                 user32.ShowWindow(self.root, 9)
             user32.SetForegroundWindow(self.root)
             [self.wait(0.1) for _ in range(20) if user32.GetForegroundWindow() != self.root]
-            with export_data(self.filename) as rows:
-                data = list(csv.DictReader(rows, delimiter='\t'))
+            with export_data(self.filename) as string:
+                try:
+                    data = pd.read_csv(io.StringIO(string), sep='\t').dropna(subset=['证券代码'])
+                except Exception as e:
+                    print('没安装 pandas, 返回一个列表', e)
+                    g = csv.reader(string.splitlines(), delimiter='\t')
+                    header = next(g)
+                    data = [dict(zip(header, (x or None for x in gg))) for gg in g]
+            # data = list(csv.DictReader(rows, delimiter='\t'))
             # data = self.copy_data(self.get_handle(category))
         return data
 
