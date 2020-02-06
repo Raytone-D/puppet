@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.12"
+__version__ = "0.8.13"
 __license__ = 'MIT'
 
 import ctypes
@@ -159,6 +159,7 @@ class Client:
         'market_value': 165,
         'assets': 165,
         'deals': 167,
+        'historical_deals': 510,
         'delivery_order': 176,
         'new': 554,
         'raffle': 554,
@@ -168,7 +169,7 @@ class Client:
     }
 
     ATTRS = ('account', 'balance', 'free_bal', 'assets', 'position', 'market_value',
-             'entrustment', 'cancelable', 'deals', 'new', 'bingo')
+             'entrustment', 'cancelable', 'deals', 'new', 'bingo', 'delivery_order', 'historical_deals')
     INIT = 'position', 'buy', 'sell', 'cancel', 'deals', 'entrustment', 'assets'
     LOGIN = (1011, 1012, 1001, 1003, 1499)
     ACCOUNT = (59392, 0, 1711)
@@ -370,19 +371,16 @@ class Client:
     def query(self, category):
         """realtime trading data
         2019-5-19 加入数据缓存功能
+        2020-2-6 修复 if-elif
         """
-        if category not in self.ATTRS:
-            data = 'UNDEFINED'
-        if category in ('account', 'mkt'):
-            return self._text(self.get_handle('account'))
-
-        print('Querying %s on-line...' % category)
+        print('Querying {} on-line...'.format(category))
         self.switch(category)
-        self.click_key({
-            'deals': ord('E'),
-            'entrustment': ord('R')
-        }.get(category)).wait()  # 'position': ord('W'),
-        if category in ('assets', 'balance', 'free_bal', 'market_value'):
+
+        if category not in self.ATTRS:
+            data = 'Unknown'
+        elif category in ('account', 'mkt'):
+            return self._text(self.get_handle('account'))
+        elif category in ('assets', 'balance', 'free_bal', 'market_value'):
             for _ in range(10):
                 data = self._text(self.get_handle(category))
                 if data:
@@ -390,7 +388,6 @@ class Client:
                     break
                 else:
                     self.wait(0.2)
-
         else:  # data sheet
             if user32.IsIconic(self.root):
                 # print('最小化')
