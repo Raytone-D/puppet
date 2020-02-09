@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.14"
+__version__ = "0.8.15"
 __license__ = 'MIT'
 
 import ctypes
@@ -19,6 +19,7 @@ import threading
 import winreg
 import os
 import csv
+import sys
 
 from functools import reduce, lru_cache
 from collections import OrderedDict
@@ -116,32 +117,27 @@ def simulate_shortcuts(key1, key2=None):
     user32.keybd_event(key1, scan1, KEYEVENTF_KEYUP, 0)
 
 
-@contextmanager
 def export_data(path: str):
     VK_CONTROL = 17
     VK_ALT = 18
     VK_S = 83
-    for _ in range(99):
+    for x in range(99):
         simulate_shortcuts(VK_CONTROL, VK_S)  # 右键保存 Ctrl+S
         wait_for_popup()
         simulate_shortcuts(VK_ALT, VK_S)  # 按钮保存 Alt+S 或 回车键
-        [time.sleep(0.05) for _ in range(99) if not os.path.isfile(path)]
-        # time.sleep(0.1)
-        try:
-            with open(path) as f:
-                string = f.read()
-            if string:
-                break
-            else:
-                # print('fuck...')
-                os.remove(path)
-        except Exception as e:
-            print(e)
+        for i in range(99):
             time.sleep(0.05)
-    yield string
-    if os.path.isfile(path):
-        # print(f'Remove {path}')
-        os.remove(path)
+            try:
+                with open(path) as f:
+                    string = f.read()
+            except Exception:
+                continue
+            else:
+                os.remove(path)
+                if string:
+                    print(x, i, 'DONE!')
+                    return string
+                break
 
 
 class Client:
@@ -320,7 +316,7 @@ class Client:
                  'cancel_sell': '撤卖(C)'}.get(action)
         if action in ('cancel', 'cancel_all', 'cancel_buy', 'cancel_sell'):
             data = self.query('cancelable')
-            if not data:
+            if not len(data):
                 self.wait()
         return self.fill_and_submit(symbol, *args, delay=delay, label=label).wait().answer()
         # return self.fill(qty or full).click_button(label={'buy': '买入[B]','sell': '卖出[S]','reverse_repo': '确定'}[action])
@@ -384,34 +380,32 @@ class Client:
         self.switch(category)
 
         if category not in self.ATTRS:
-            data = 'Unknown'
+            return 'Unknown'
         elif category in ('account', 'mkt'):
             return self._text(self.get_handle('account'))
         elif category in ('assets', 'balance', 'free_bal', 'market_value'):
-            for _ in range(10):
+            for _ in range(99):
                 data = self._text(self.get_handle(category))
                 if data:
-                    data = float(data)
-                    break
+                    return float(data)
                 else:
-                    self.wait(0.2)
+                    self.wait(0.05)
         else:  # data sheet
             if user32.IsIconic(self.root):
                 # print('最小化')
                 user32.ShowWindow(self.root, 9)
             user32.SetForegroundWindow(self.root)
             [self.wait(0.1) for _ in range(20) if user32.GetForegroundWindow() != self.root]
-            with export_data(self.filename) as string:
-                try:
-                    data = pd.read_csv(io.StringIO(string), sep='\t').dropna(subset=['证券代码'])
-                except Exception as e:
-                    print('没安装 pandas, 返回一个列表', e)
-                    g = csv.reader(string.splitlines(), delimiter='\t')
-                    header = next(g)
-                    data = [dict(zip(header, (x or None for x in gg))) for gg in g]
+            string = export_data(self.filename)
+            if 'pd' in globals():
+                return pd.read_csv(io.StringIO(string), sep='\t', \
+                    dtype={'证券代码': str}).dropna(subset=['证券代码'])
+            print('没安装 pandas, 返回一个列表')
+            g = csv.reader(string.splitlines(), delimiter='\t')
+            header = next(g)
+            return [dict(zip(header, (x or None for x in gg))) for gg in g]
             # data = list(csv.DictReader(rows, delimiter='\t'))
             # data = self.copy_data(self.get_handle(category))
-        return data
 
     def __getattr__(self, attrname):
         return self.query(attrname)
