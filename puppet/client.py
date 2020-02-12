@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.16"
+__version__ = "0.8.17"
 __license__ = 'MIT'
 
 import ctypes
@@ -604,7 +604,8 @@ class Client:
         """ 捕捉弹窗的文本内容 """
         buf = ctypes.create_unicode_buffer(64)
         root = root or self.root
-        for _ in range(10):
+        for _ in range(99):
+            print(':')
             self.wait(0.1)
             hPopup = user32.GetLastActivePopup(root)
             if hPopup != root:  # and self.visible(hPopup):
@@ -625,11 +626,15 @@ class Client:
         return text if text else '委托成功后是否弹出提示对话框：否'
 
     def answer(self):
-        text = self.capture()
-        if any(('年化收益率' in text, '小数部分' in text)):
-            text = f'{text} {self.capture()}'
-        return (re.findall(r'(\w*[0-9]+)\w*', text)[0],
-                text) if '合同编号' in text else (0, text)
+        """2020-2-10 修改逻辑确保回报窗口被关闭"""
+        for _ in range(3):
+            text = self.capture()
+            if '无可撤委托' in text:
+                return (0, text)
+            elif '编号' in text:
+                return re.findall(r'(\w*[0-9]+)\w*', text)[0], text
+            print(text)
+        return 0, '委托(成交)编号无法获取！'
 
     def refresh(self):
         print('Refreshing page...')
