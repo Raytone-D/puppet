@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.17"
+__version__ = "0.8.18"
 __license__ = 'MIT'
 
 import ctypes
@@ -448,7 +448,7 @@ class Client:
         self.heartbeat_stamp = time.time()
         assert self.visible(), "客户端已关闭或账户已登出"
         node = name if isinstance(name, int) else self.NODE.get(name)
-        if user32.SendMessageW(self.root, MSG['WM_COMMAND'], node, 0):
+        if user32.SendMessageW(self.root, MSG['WM_COMMAND'], 0x2000<<16|node, 0):
             self._page = reduce(user32.GetDlgItem, self.PAGE, self.root)
             return self
 
