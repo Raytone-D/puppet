@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.18"
+__version__ = "0.8.19"
 __license__ = 'MIT'
 
 import ctypes
@@ -155,6 +155,7 @@ class Client:
         'trade': 512,
         'buy2': 512,
         'sell2': 512,
+        'mkt': 512,
         'account': 165,
         'balance': 165,
         'free_bal': 165,
@@ -167,6 +168,8 @@ class Client:
         'new': 554,
         'raffle': 554,
         'reverse_repo': 717,
+        'purchase': 433,
+        'redeem': 434,
         'batch': 5170,
         'bingo': 1070
     }
@@ -191,6 +194,8 @@ class Client:
     BUY2 = (3451, 1032, 1541, 1033, 1018, 1034)
     SELL2 = (3453, 1035, 1542, 1058, 1019, 1039)
     CANCEL = (3348,)
+    PURCHASE = (1032, 1034)
+    REDEEM = (1032, 1034)
     PAGE = 59648, 59649
     FRESH = 32790
     QUOTE = 1024
@@ -277,6 +282,7 @@ class Client:
         return self
 
     def fill_and_submit(self, *args, delay=0.1, label=''):
+        print(args)
         user32.SetForegroundWindow(self._page)
         for text, handle in zip(args, self._handles):
             self.fill(text, handle)
@@ -308,7 +314,7 @@ class Client:
             5 ALL_OR_CANCEL      全额成交或撤销 深圳
         """
         self.switch(action)
-        if action in ('buy', 'sell', 'reverse_repo'):
+        if action in ('buy', 'sell', 'reverse_repo', 'perchase', 'redeem'):
             self.switch_mkt(symbol, self.get_handle('mkt'))
         self._handles = self.get_handle(action)
         label = {'cancel_all': '全撤(Z /)',
@@ -370,6 +376,14 @@ class Client:
         target = self.new
         if target:
             return [func(ipo) for ipo in target]
+
+    def fund_purchase(self, symbol: str, amount: int):
+        """基金申购"""
+        return self.trade('purchase', symbol, amount)
+
+    def fund_redeem(self, symbol:str, share: int):
+        """基金赎回"""
+        return self.trade('redeem', symbol, share)
 
     def query(self, category):
         """realtime trading data
@@ -512,7 +526,7 @@ class Client:
             action = 'cancel'
         self.switch(action)
         m = getattr(self, action.upper(), self.TABLE)
-        if action in ('buy', 'buy2', 'sell', 'sell2', 'reverse_repo', 'cancel'):
+        if action in ('buy', 'buy2', 'sell', 'sell2', 'reverse_repo', 'cancel', 'purchase', 'redeem'):
             data = [user32.GetDlgItem(self._page, i) for i in m]
         else:
             data = reduce(
@@ -629,7 +643,7 @@ class Client:
         """2020-2-10 修改逻辑确保回报窗口被关闭"""
         for _ in range(3):
             text = self.capture()
-            if '无可撤委托' in text:
+            if '无可撤委托' in text or '提交失败' in text:
                 return (0, text)
             elif '编号' in text:
                 return re.findall(r'(\w*[0-9]+)\w*', text)[0], text
