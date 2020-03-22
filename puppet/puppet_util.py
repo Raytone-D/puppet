@@ -1,8 +1,12 @@
 """给木偶写的一些工具函数
 """
 import configparser
+import ctypes
 import datetime
 import os
+import time
+
+from ctypes.wintypes import WORD, DWORD
 
 
 OPTIONS = {
@@ -20,6 +24,33 @@ OPTIONS = {
     # 'SET_TOP_MOST': 'yes',
     # 'SYS_ZCSX_ENABLE': 'yes' #    自动刷新资产数据 修改无效，会强制恢复为no！
 }
+
+user32 = ctypes.windll.user32
+
+
+def check_input_mode(h_edit, text='000001'):
+    """获取 输入模式"""
+    user32.SendMessageW(h_edit, 12, 0, text)
+    time.sleep(0.3)
+    return 'WM' if user32.SendMessageW(h_edit, 14, 0, 0) == len(text) else 'KB'
+
+
+def get_root(key: list =['网上股票交易系统', '通达信']) -> tuple:
+    from ctypes.wintypes import BOOL, HWND, LPARAM
+
+    @ctypes.WINFUNCTYPE(BOOL, HWND, LPARAM)
+    def callback(hwnd, lparam):
+        user32.GetWindowTextW(hwnd, buf, 64)
+        for s in key:
+            if s in buf.value:
+                handle.value = hwnd
+                return False
+        return True
+
+    buf = ctypes.create_unicode_buffer(64)
+    handle = ctypes.c_ulong()
+    user32.EnumWindows(callback)
+    return handle.value, buf.value
 
 
 def get_today():

@@ -4,7 +4,7 @@ from setuptools import setup
 
 from puppet import __version__ as VERSION
 
-REQUIRED = ['pyperclip']
+REQUIRED = ['baidu-aip', 'keyboard']
 REQUIRES_PYTHON = '>=3.4.0'
 
 setup(
@@ -29,5 +29,6 @@ setup(
         'Programming Language :: Python :: 3.4',
         'Programming Language :: Python :: 3.5',
         'Programming Language :: Python :: 3.6',
+        'Programming Language :: Python :: 3.7',
     ],
 )

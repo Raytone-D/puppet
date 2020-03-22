@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.19"
+__version__ = "0.8.20"
 __license__ = 'MIT'
 
 import ctypes
@@ -24,15 +24,13 @@ import sys
 from functools import reduce, lru_cache
 from collections import OrderedDict
 from importlib import import_module
-from contextlib import contextmanager
-
 
 try:
-    # import pyperclip
     import pandas as pd
 except Exception as e:
-    # print("{}\n请先在命令行下运行：pip install pyperclip，再使用puppet！".format(e))
     print(e)
+
+from . import puppet_util as util
 
 
 MSG = {
@@ -230,6 +228,17 @@ class Client:
         if os.path.isfile(self.filename):
             # print(f'Remove {path}')
             os.remove(self.filename)
+        if util.check_input_mode(self.get_handle('buy')[0]) == 'KB':
+            try:
+                fill = import_module('keyboard').write
+            except Exception:
+                fill = import_module('pywinauto.keyboard').send_keys
+            def func(*args, **kwargs):
+                user32.SetForegroundWindow(self._page)
+                for text in args:
+                    fill(f'{text}\n')
+                return self
+            self.fill_and_submit = func
 
     def run(self, exe_path):
         assert 'xiadan' in subprocess.os.path.basename(exe_path).split('.')\
@@ -282,14 +291,13 @@ class Client:
         return self
 
     def fill_and_submit(self, *args, delay=0.1, label=''):
-        print(args)
         user32.SetForegroundWindow(self._page)
         for text, handle in zip(args, self._handles):
             self.fill(text, handle)
             if delay:
                 for _ in range(9):
                     max_qty = self._text(self._handles[-1])
-                    if max_qty not in ('', '0'):
+                    if max_qty not in (''):
                         break
                     self.wait(delay)
         self.wait(0.1)
