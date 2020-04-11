@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.20"
+__version__ = "0.8.21"
 __license__ = 'MIT'
 
 import ctypes
@@ -49,7 +49,7 @@ MSG = {
 
 user32 = ctypes.windll.user32
 
-curr_time = lambda : time.strftime('%F %X %a')
+curr_time = lambda : time.strftime('%Y-%m-%d %X')  # backward
 
 
 def login(accinfos):
@@ -224,9 +224,8 @@ class Client:
         self.make_heartbeat()
         self.copy_protection = copy_protection
         dirname = kwargs.get('dirname') or lacate_folder()
-        self.filename = f'{dirname}\\table.xls'
+        self.filename = '{}\\table.xls'.format(dirname)
         if os.path.isfile(self.filename):
-            # print(f'Remove {path}')
             os.remove(self.filename)
         if util.check_input_mode(self.get_handle('buy')[0]) == 'KB':
             try:
@@ -236,7 +235,7 @@ class Client:
             def func(*args, **kwargs):
                 user32.SetForegroundWindow(self._page)
                 for text in args:
-                    fill(f'{text}\n')
+                    fill('{}\n'.format(text))
                 return self
             self.fill_and_submit = func
 
@@ -244,7 +243,7 @@ class Client:
         assert 'xiadan' in subprocess.os.path.basename(exe_path).split('.')\
             and subprocess.os.path.exists(
                 exe_path), '客户端路径("%s")错误' % exe_path
-        print(f'{curr_time()} 正在尝试运行客户端("{exe_path}")...')
+        print('{curr_time()} 正在尝试运行客户端("{}")...'.format(exe_path))
         pid = subprocess.Popen(exe_path).pid
         text = ctypes.c_ulong()
         hwndChildAfter = None
@@ -264,12 +263,12 @@ class Client:
             self._page, i) for i in self.LOGIN]
         self._handles.append(h2 if self.visible(h2) else h1)
         self.root = user32.GetParent(login_h)
-        print(f'{curr_time()} 登录界面准备就绪。')
+        print('{} 登录界面准备就绪。'.format(curr_time()))
 
     def login(self, account_no: str ='', password: str ='', comm_pwd: str ='',
         client_path: str=''):
         self.run(client_path)
-        print(f'{curr_time()} 正在登录交易服务器...')
+        print('{} 正在登录交易服务器...'.format(curr_time()))
         self.fill_and_submit(account_no, password, comm_pwd or image_to_string(
             grab(get_rect(self._IMG))))
         # self.capture()
@@ -279,7 +278,7 @@ class Client:
             self.comm_pwd = comm_pwd
             self.mkt = (0, 1) if get_text(self.get_handle('mkt')).startswith(
                 '上海') else (1, 0)
-            print(f'{curr_time()} 已登入交易服务器。')
+            print('{} 已登入交易服务器。'.format(curr_time()))
             self.init()
             return self
 
@@ -479,7 +478,7 @@ class Client:
             self.switch(name).wait(0.3)
 
         user32.ShowOwnedPopups(self.root, False)
-        print(f"{curr_time()} 木偶准备就绪！")
+        print("{} 木偶准备就绪！".format(curr_time()))
         return self
 
     def wait(self, timeout=0.5):
