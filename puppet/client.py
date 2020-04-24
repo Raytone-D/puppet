@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.21"
+__version__ = "0.8.22"
 __license__ = 'MIT'
 
 import ctypes
@@ -24,11 +24,6 @@ import sys
 from functools import reduce, lru_cache
 from collections import OrderedDict
 from importlib import import_module
-
-try:
-    import pandas as pd
-except Exception as e:
-    print(e)
 
 from . import puppet_util as util
 
@@ -225,6 +220,10 @@ class Client:
         self.copy_protection = copy_protection
         dirname = kwargs.get('dirname') or lacate_folder()
         self.filename = '{}\\table.xls'.format(dirname)
+        self.to_dict=kwargs.get('to_dict')
+        self._post_init()
+
+    def _post_init(self):
         if os.path.isfile(self.filename):
             os.remove(self.filename)
         if util.check_input_mode(self.get_handle('buy')[0]) == 'KB':
@@ -418,15 +417,7 @@ class Client:
             user32.SetForegroundWindow(self.root)
             [self.wait(0.1) for _ in range(20) if user32.GetForegroundWindow() != self.root]
             string = export_data(self.filename)
-            if 'pd' in globals():
-                return pd.read_csv(io.StringIO(string), sep='\t', \
-                    dtype={'证券代码': str}).dropna(subset=['证券代码'])
-            print('没安装 pandas, 返回一个列表')
-            g = csv.reader(string.splitlines(), delimiter='\t')
-            header = next(g)
-            return [dict(zip(header, (x or None for x in gg))) for gg in g]
-            # data = list(csv.DictReader(rows, delimiter='\t'))
-            # data = self.copy_data(self.get_handle(category))
+            return util.normalize(string, self.to_dict)
 
     def __getattr__(self, attrname):
         return self.query(attrname)

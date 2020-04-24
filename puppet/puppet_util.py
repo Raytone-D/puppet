@@ -3,11 +3,53 @@
 import configparser
 import ctypes
 import datetime
+import io
 import os
 import time
 
 from ctypes.wintypes import WORD, DWORD
 
+try:
+    import pandas as pd
+except Exception as e:
+    print(e)
+
+
+COLNAMES = {
+    '证券代码': 'code',
+    '证券名称': 'name',
+    '股票余额': 'qty',  # 海通证券
+    '当前持仓': 'qty',  # 银河证券
+    '可用余额': 'remainder',
+    '冻结数量': 'frozen',
+    '盈亏': 'profit',
+    '参考盈亏': 'profit',  # 银河证券
+    '浮动盈亏': 'profit',  # 广发证券
+    '市价': 'price',
+    '市值': 'amount',
+    '参考市值': 'amount',  # 银河证券
+    '最新市值': 'amount',  # 国金|平安证券
+    '成交时间': 'time',
+    '成交日期': 'date',
+    '成交数量': 'qty',
+    '成交均价': 'price',
+    '成交价格': 'price',
+    '成交金额': 'amount',
+    '成交编号': 'num',
+    '申报时间': 'time',
+    '委托日期': 'date',
+    '委托时间': 'time',
+    '委托价格': 'order_price',
+    '委托数量': 'order_qty',
+    '合同编号': 'order_num',
+    '委托编号': 'order_num',  # 银河证券
+    '委托状态': 'status',
+    '操作': 'op',
+    '发生金额': 'total',
+    '手续费': 'commission',
+    '印花税': 'tax',
+    '其他杂费': 'fees'
+}
 
 OPTIONS = {
     'GUI_CHEDAN_CONFIRM': 'no',
@@ -26,6 +68,16 @@ OPTIONS = {
 }
 
 user32 = ctypes.windll.user32
+
+
+def normalize(string: str, to_dict=False):
+    '''标准化输出交易数据'''
+    df = pd.read_csv(io.StringIO(string), sep='\t', dtype={'证券代码': str})
+    df.drop(columns=[x for x in df.columns if x not in COLNAMES], inplace=True)
+    df.columns = [COLNAMES.get(x) for x in df.columns]
+    if 'amount' in df.columns:
+        df['ratio'] = df['amount'] / df['amount'].sum()
+    return df.to_dict('list') if to_dict else df
 
 
 def check_input_mode(h_edit, text='000001'):
