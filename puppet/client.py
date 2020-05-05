@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.22"
+__version__ = "0.8.23"
 __license__ = 'MIT'
 
 import ctypes
@@ -192,6 +192,7 @@ class Client:
     PAGE = 59648, 59649
     FRESH = 32790
     QUOTE = 1024
+    ERROR = ['无可撤委托', '提交失败', '当前时间不允许委托']
     WAY = {
         0: "LIMIT              限价委托 沪深",
         1: "BEST5_OR_CANCEL    最优五档即时成交剩余撤销 沪深",
@@ -204,72 +205,82 @@ class Client:
     buf_length = 32
     client = '同花顺'
 
-    def __init__(self, accinfos={}, enable_heartbeat=True, copy_protection=False,
-        **kwargs):
+    def __init__(self, accinfos={}, enable_heartbeat=True, copy_protection=False,\
+        to_dict=False, dirname='', keyboard=False, title=None, **kwargs):
         """
         :arg: 客户端标题(str)或客户端根句柄(int)
         """
-        self.root = 0
-        if accinfos:
-            self.login(**accinfos)
-        elif kwargs:
-            self.bind(**kwargs)
-        self.heartbeat_stamp = time.time()
+        self.accinfos = accinfos
         self.enable_heartbeat = enable_heartbeat
-        self.make_heartbeat()
         self.copy_protection = copy_protection
-        dirname = kwargs.get('dirname') or lacate_folder()
-        self.filename = '{}\\table.xls'.format(dirname)
-        self.to_dict=kwargs.get('to_dict')
+        self.to_dict = to_dict
+        self.dirname = dirname
+        self.keyboard = keyboard
+        self.title = title
         self._post_init()
 
     def _post_init(self):
+        self.heartbeat_stamp = time.time()
+        self.root = 0
+        self.filename = '{}\\table.xls'.format(self.dirname or lacate_folder())
+
+        if self.title == '':
+            self.title = '网上股票交易系统5.0'
+
         if os.path.isfile(self.filename):
             os.remove(self.filename)
-        if util.check_input_mode(self.get_handle('buy')[0]) == 'KB':
-            try:
-                fill = import_module('keyboard').write
-            except Exception:
-                fill = import_module('pywinauto.keyboard').send_keys
-            def func(*args, **kwargs):
-                user32.SetForegroundWindow(self._page)
-                for text in args:
-                    fill('{}\n'.format(text))
-                return self
-            self.fill_and_submit = func
+
+        if self.accinfos:
+            self.login(**self.accinfos)
+        elif self.title:
+            self.bind(self.title)
+
+        self.make_heartbeat()
 
     def run(self, exe_path):
         assert 'xiadan' in subprocess.os.path.basename(exe_path).split('.')\
             and subprocess.os.path.exists(
                 exe_path), '客户端路径("%s")错误' % exe_path
-        print('{curr_time()} 正在尝试运行客户端("{}")...'.format(exe_path))
+        print('{} 正在尝试运行客户端("{}")...'.format(curr_time(), exe_path))
         pid = subprocess.Popen(exe_path).pid
         text = ctypes.c_ulong()
         hwndChildAfter = None
         for _ in range(30):
             self.wait()
-            login_h = user32.FindWindowExW(None, hwndChildAfter, '#32770', None)
-            combobox_h = user32.GetDlgItem(login_h, 1011)  # ComboBox 0x3F3 1011
+            h_login = user32.FindWindowExW(None, hwndChildAfter, '#32770', None)
+            combobox_h = user32.GetDlgItem(h_login, 1011)  # ComboBox 0x3F3 1011
             if combobox_h:
-                user32.GetWindowThreadProcessId(login_h, ctypes.byref(text))
+                user32.GetWindowThreadProcessId(h_login, ctypes.byref(text))
                 if text.value == pid:
-                    self._page = login_h
-                    self.login_h = login_h
+                    self._page = h_login
+                    self.h_login = h_login
                     break
-            hwndChildAfter = login_h
-        [self.wait() for _ in range(9) if not self.visible(login_h)]
+            hwndChildAfter = h_login
+        [self.wait() for _ in range(9) if not self.visible(h_login)]
         *self._handles, h1, h2, self._IMG = [user32.GetDlgItem(
             self._page, i) for i in self.LOGIN]
         self._handles.append(h2 if self.visible(h2) else h1)
-        self.root = user32.GetParent(login_h)
+        self.root = user32.GetParent(h_login)
         print('{} 登录界面准备就绪。'.format(curr_time()))
 
     def login(self, account_no: str ='', password: str ='', comm_pwd: str ='',
         client_path: str=''):
         self.run(client_path)
         print('{} 正在登录交易服务器...'.format(curr_time()))
-        self.fill_and_submit(account_no, password, comm_pwd or image_to_string(
-            grab(get_rect(self._IMG))))
+        user32.SetForegroundWindow(self.h_login)
+
+        while True:
+            time.sleep(.5)
+            if user32.GetForegroundWindow() == self.h_login:
+                # 模拟键盘输入
+                util.keyboard.send(util.keyboard.KEY_UP)
+                info = (account_no, password, comm_pwd or image_to_string(grab(get_rect(self._IMG))))
+                for text in info:
+                    util.fill(text)
+                    time.sleep(1)
+                    util.keyboard.send('\r')
+                break
+
         # self.capture()
         if self.visible(times=20):
             self.account_no = account_no
@@ -469,7 +480,17 @@ class Client:
             self.switch(name).wait(0.3)
 
         user32.ShowOwnedPopups(self.root, False)
+
+        if util.check_input_mode(self.get_handle('buy')[0]) == 'KB' or self.keyboard:
+            def func(*args, **kwargs):
+                user32.SetForegroundWindow(self._page)
+                for text in args:
+                    util.fill('{}\n'.format(text))
+                return self
+            self.fill_and_submit = func
+
         print("{} 木偶准备就绪！".format(curr_time()))
+
         return self
 
     def wait(self, timeout=0.5):
@@ -616,8 +637,7 @@ class Client:
         """ 捕捉弹窗的文本内容 """
         buf = ctypes.create_unicode_buffer(64)
         root = root or self.root
-        for _ in range(99):
-            print(':')
+        for _ in range(9):
             self.wait(0.1)
             hPopup = user32.GetLastActivePopup(root)
             if hPopup != root:  # and self.visible(hPopup):
@@ -635,18 +655,18 @@ class Client:
                 self.click_button(label, h_dialog=hPopup)
                 break
         text = buf.value
-        return text if text else '委托成功后是否弹出提示对话框：否'
+        return text if text else '请按提示修改：系统设置->快速交易->委托成功后是否弹出提示对话框->是'
 
     def answer(self):
         """2020-2-10 修改逻辑确保回报窗口被关闭"""
         for _ in range(3):
             text = self.capture()
-            if '无可撤委托' in text or '提交失败' in text:
-                return (0, text)
-            elif '编号' in text:
+            if '编号' in text:
                 return re.findall(r'(\w*[0-9]+)\w*', text)[0], text
-            print(text)
-        return 0, '委托(成交)编号无法获取！'
+            for x in self.ERROR:
+                if x in text:
+                    return (False, text)
+        return False, '弹窗捕获失败，请用puppet_util.check_config(path_to_xiadan.inf)检查设置'
 
     def refresh(self):
         print('Refreshing page...')

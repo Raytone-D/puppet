@@ -14,6 +14,14 @@ try:
 except Exception as e:
     print(e)
 
+try:
+    import keyboard
+    from keyboard import write as fill
+except Exception as e:
+    print(e)
+    from pywinauto import keyboard
+    from pywinauto.keyboard import send_keys as fill
+
 
 COLNAMES = {
     '证券代码': 'code',

@@ -1,4 +1,5 @@
-# 本项目为学习WIN32 API而写，推荐一站式解决方案 http://www.iguuu.com/e?x=19829 <br/>
+# 本项目为学习WIN32 API而写，擅自将puppet用于生产环境，后果自负！
+# 推荐一站式解决方案 【策略易】 http://www.iguuu.com/e?x=19829 <br/>
 <br/>
 
 **快速入门：**
@@ -16,20 +17,16 @@ accinfo = {
 
 acc = puppet.login(accinfo)
 
-# 绑定已登录账户
-title = '广发证券核新网上交易系统7.65'
-acc = puppet.Client(title=title)
+# 绑定已登录账户。个别券商要传入'核新网上交易系统x.xx'之类的标题
+acc = puppet.Client(title='')
 
 # trade
 acc.buy('000001', 12.68, 100)
 acc.sell('000001', 12.68, 100)
-acc.cancel(choice='cancel_buy')
-acc.cancel_sell()
+acc.cancel_all()
 
-# query
-acc.position  # 持仓列表
-acc.free_bal  # 可用余额
-acc.assets  # 总资产
+# query -> assets, market_value, balance, deals, entrustment, delivery_order
+acc.query('position')
 ```
 
 **使用环境：**
