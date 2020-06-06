@@ -23,12 +23,26 @@ except Exception as e:
     from pywinauto.keyboard import send_keys as fill
 
 
+class Msg:
+
+    WM_SETTEXT = 12
+    WM_GETTEXT = 13
+    WM_CLOSE = 16
+    WM_KEYDOWN = 256
+    WM_KEYUP = 257
+    WM_COMMAND = 273
+    BM_CLICK = 245
+    CB_GETCOUNT = 326
+    CB_SETCURSEL = 334
+    CBN_SELCHANGE = 1
+
+
 COLNAMES = {
-    '证券代码': 'code',
+    '证券代码': 'symbol',
     '证券名称': 'name',
-    '股票余额': 'qty',  # 海通证券
-    '当前持仓': 'qty',  # 银河证券
-    '可用余额': 'remainder',
+    '股票余额': 'quantity',  # 海通证券
+    '当前持仓': 'quantity',  # 银河证券
+    '可用余额': 'leftover',
     '冻结数量': 'frozen',
     '盈亏': 'profit',
     '参考盈亏': 'profit',  # 银河证券
@@ -39,18 +53,18 @@ COLNAMES = {
     '最新市值': 'amount',  # 国金|平安证券
     '成交时间': 'time',
     '成交日期': 'date',
-    '成交数量': 'qty',
+    '成交数量': 'quantity',
     '成交均价': 'price',
     '成交价格': 'price',
     '成交金额': 'amount',
-    '成交编号': 'num',
+    '成交编号': 'id',
     '申报时间': 'time',
     '委托日期': 'date',
     '委托时间': 'time',
     '委托价格': 'order_price',
     '委托数量': 'order_qty',
-    '合同编号': 'order_num',
-    '委托编号': 'order_num',  # 银河证券
+    '合同编号': 'order_id',
+    '委托编号': 'order_id',  # 银河证券
     '委托状态': 'status',
     '操作': 'op',
     '发生金额': 'total',
@@ -115,6 +129,13 @@ def get_root(key: list =['网上股票交易系统', '通达信']) -> tuple:
 
 def get_today():
     return datetime.date.today()
+
+
+def get_text(h_parent, text_id):
+    '获取控件文本内容'
+    buf = ctypes.create_unicode_buffer(64)
+    user32.SendDlgItemMessageW(h_parent, text_id, Msg.WM_GETTEXT, 64, buf)
+    return buf.value
 
 
 def check_config(folder=None, encoding='gb18030'):

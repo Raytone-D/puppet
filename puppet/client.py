@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "0.8.23"
+__version__ = "1.0.0"
 __license__ = 'MIT'
 
 import ctypes
@@ -28,27 +28,14 @@ from importlib import import_module
 from . import puppet_util as util
 
 
-MSG = {
-    'WM_SETTEXT': 12,
-    'WM_GETTEXT': 13,
-    'WM_CLOSE': 16,
-    'WM_KEYDOWN': 256,
-    'WM_KEYUP': 257,
-    'WM_COMMAND': 273,
-    'BM_CLICK': 245,
-    'CB_GETCOUNT': 326,
-    'CB_SETCURSEL': 334,
-    'CBN_SELCHANGE': 1,
-    'COPY': 57634
-}
-
 user32 = ctypes.windll.user32
+
 
 curr_time = lambda : time.strftime('%Y-%m-%d %X')  # backward
 
 
 def login(accinfos):
-    return Client(accinfos)
+    return Account(accinfos)
 
 
 def get_rect(obj_handle, ext_rate=0):
@@ -77,7 +64,7 @@ def image_to_string(image, token={
 
 def get_text(obj_handle, num=32):
     buf = ctypes.create_unicode_buffer(num)
-    user32.SendMessageW(obj_handle, MSG['WM_GETTEXT'], num, buf)
+    user32.SendMessageW(obj_handle, util.Msg.WM_GETTEXT, num, buf)
     return buf.value
 
 
@@ -133,8 +120,8 @@ def export_data(path: str):
                 break
 
 
-class Client:
-    """Wrapper for Hexin Tonghuashun Trading Client"""
+class Ths:
+    '''Hithink RoyalFlush Trading Client'''
     NODE = {
         'buy': 161,
         'sell': 162,
@@ -142,45 +129,40 @@ class Client:
         'cancel_all': 163,
         'cancel_buy': 163,
         'cancel_sell': 163,
-        'cancelable': 163,
-        'cancel_order': 163,
-        'entrustment': 168,
+        'undone': 163,
+        'order': 168,
         'trade': 512,
         'buy2': 512,
         'sell2': 512,
         'mkt': 512,
-        'account': 165,
+        'summary': 165,
         'balance': 165,
-        'free_bal': 165,
+        'cash': 165,
         'position': 165,
         'market_value': 165,
+        'equity': 165,
         'assets': 165,
-        'deals': 167,
-        'historical_deals': 510,
+        'deal': 167,
+        'historical_deal': 510,
         'delivery_order': 176,
         'new': 554,
-        'raffle': 554,
+        'purchase_new': 554,
         'reverse_repo': 717,
         'purchase': 433,
         'redeem': 434,
         'batch': 5170,
         'bingo': 1070
     }
-
-    ATTRS = ('account', 'balance', 'free_bal', 'assets', 'position', 'market_value',
-             'entrustment', 'cancelable', 'deals', 'new', 'bingo', 'delivery_order', 'historical_deals')
-    INIT = 'position', 'buy', 'sell', 'cancel', 'deals', 'entrustment', 'assets'
+    INIT = ('cancel', 'deal', 'order', 'buy', 'sell')
     LOGIN = (1011, 1012, 1001, 1003, 1499)
-    ACCOUNT = (59392, 0, 1711)
+    ACCOUNT = (59392, 0)  #, 1711)
+    # ACCOUNT = (('account', (59392, 0, 1711), 'code', (59392, 0, 1004))
     MKT = (59392, 0, 1003)
-    BALANCE = (1012,)
-    FREE_BAL = (1016,)
-    ASSETS = (1015,)
-    MARKET_VALUE = (1014, )
     TABLE = (1047, 200, 1047)
-    MONEY = (1308, 200, 1308)
-    CANCEL_ORDER = (3348, )
-    # symbol, price, max_qty, qty, quote
+    SUMMARY_ = (1308, 200, 1308)
+    SUMMARY = (('cash', 1016), ('frozen', 1013), ('balance', 1012),
+        ('market_value', 1014), ('equity', 1015))
+    # symbol, price, max_qty, quantity, quote
     BUY = (1032, 1033, 1034, 0, 1018)
     SELL = (1032, 1033, 1034, 0, 1038)
     REVERSE_REPO = (1032, 1033, 1034, 0, 1018)
@@ -202,14 +184,13 @@ class Client:
         4: "BEST_OR_CANCEL     即时成交剩余撤销 深圳",
         5: "ALL_OR_CANCEL      全额成交或撤销 深圳"
     }
-    buf_length = 32
-    client = '同花顺'
+
+
+class Account:
+    '''Puppet Trading Account API'''
 
     def __init__(self, accinfos={}, enable_heartbeat=True, copy_protection=False,\
-        to_dict=False, dirname='', keyboard=False, title=None, **kwargs):
-        """
-        :arg: 客户端标题(str)或客户端根句柄(int)
-        """
+        to_dict=True, dirname='', keyboard=False, title=None, **kwargs):
         self.accinfos = accinfos
         self.enable_heartbeat = enable_heartbeat
         self.copy_protection = copy_protection
@@ -222,7 +203,9 @@ class Client:
     def _post_init(self):
         self.heartbeat_stamp = time.time()
         self.root = 0
+        self.ctx = Ths
         self.filename = '{}\\table.xls'.format(self.dirname or lacate_folder())
+        self.loginfile = '{}\\login.json'.format(self.dirname or lacate_folder())
 
         if self.title == '':
             self.title = '网上股票交易系统5.0'
@@ -236,6 +219,26 @@ class Client:
             self.bind(self.title)
 
         self.make_heartbeat()
+
+    def __get_node(self) -> int:
+        node = self.ctx.PAGE
+        # node = task.get('category') or task.get('action')
+        # idx = self.ctx.NODE.get(node)
+        # user32.PostMessageW(self.root, util.Msg.WM_COMMAND, 0x2000<<16|idx, 0)
+        # node = self.__get_node()
+        # time.sleep(1)  # temporary 这里改为用刷新按钮颜色判断
+        return reduce(user32.GetDlgItem, node, self.root)
+
+    def forward(self, task: dict):
+        '''{'action': 'sell', 'symbol': '000001', 'price': 12.33, 'quantity': 100}'''
+        try:
+            return getattr(self, task.pop('action'))(**task)
+        except Exception as e:
+            # task.update({'msg': e})
+            return {'msg': e}
+
+    def wrap(self, action: str, task: dict):
+        pass
 
     def run(self, exe_path):
         assert 'xiadan' in subprocess.os.path.basename(exe_path).split('.')\
@@ -258,7 +261,7 @@ class Client:
             hwndChildAfter = h_login
         [self.wait() for _ in range(9) if not self.visible(h_login)]
         *self._handles, h1, h2, self._IMG = [user32.GetDlgItem(
-            self._page, i) for i in self.LOGIN]
+            self._page, i) for i in self.ctx.LOGIN]
         self._handles.append(h2 if self.visible(h2) else h1)
         self.root = user32.GetParent(h_login)
         print('{} 登录界面准备就绪。'.format(curr_time()))
@@ -290,19 +293,20 @@ class Client:
                 '上海') else (1, 0)
             print('{} 已登入交易服务器。'.format(curr_time()))
             self.init()
-            return self
+            return {'puppet': "{} 木偶准备就绪！".format(curr_time())}
+        return {'puppet': '{} 登录失败或服务器失联'.format(curr_time())}
 
     def exit(self):
         "退出系统并关闭程序"
         assert self.visible(), "客户端没有登录"
-        user32.PostMessageW(self.root, MSG['WM_CLOSE'], 0, 0)
+        user32.PostMessageW(self.root, util.Msg.WM_CLOSE, 0, 0)
         print("已退出客户端!")
         return self
 
     def fill_and_submit(self, *args, delay=0.1, label=''):
         user32.SetForegroundWindow(self._page)
         for text, handle in zip(args, self._handles):
-            self.fill(text, handle)
+            self.fill(str(text), handle)
             if delay:
                 for _ in range(9):
                     max_qty = self._text(self._handles[-1])
@@ -313,13 +317,17 @@ class Client:
         self.click_button(label)
         return self
 
-    def trade(self, action: str, symbol: str ='', *args, delay: float =0.1):
+    @property
+    def id(self):
+        return util.get_text(self.get_handle('account'), 1711)
+
+    def trade(self, action: str, symbol: str ='', *args, delay: float =0.1) -> dict:
         """下单
         客户端->系统->交易设置->默认买入价格(数量): 空、默认卖出价格(数量):空
         :action: str, 交易方式; "buy2"或"sell2", 'margin'
         :symbol: str, 证券代码; 例如'000001', "510500"
         :arg: float or str of float, 判断为委托价格，int判断为委托策略, 例如'3.32', 3.32, 1
-        :qty: int or str of int, 委托数量, 例如100, '100'
+        :quantity: int or str of int, 委托数量, 例如100, '100'
             委托策略(注意个别券商自定义索引)
             0 LIMIT              限价委托 沪深
             1 BEST5_OR_CANCEL    最优五档即时成交剩余撤销 上海
@@ -338,34 +346,34 @@ class Client:
                  'cancel_buy': '撤买(X)',
                  'cancel_sell': '撤卖(C)'}.get(action)
         if action in ('cancel', 'cancel_all', 'cancel_buy', 'cancel_sell'):
-            data = self.query('cancelable')
+            data = self.query('undone')
             if not len(data):
                 self.wait()
         return self.fill_and_submit(symbol, *args, delay=delay, label=label).wait().answer()
-        # return self.fill(qty or full).click_button(label={'buy': '买入[B]','sell': '卖出[S]','reverse_repo': '确定'}[action])
+        # return self.fill(quantity or full).click_button(label={'buy': '买入[B]','sell': '卖出[S]','reverse_repo': '确定'}[action])
 
-    def buy(self, symbol: str, arg, qty: int) -> tuple:
-        return self.trade('buy', symbol, arg, qty)
+    def buy(self, symbol: str, price, quantity: int) -> dict:
+        return self.trade('buy', symbol, price, quantity)
 
-    def sell(self, symbol: str, arg, qty: int) -> tuple:
-        return self.trade('sell', symbol, arg, qty)
+    def sell(self, symbol: str, price, quantity: int) -> dict:
+        return self.trade('sell', symbol, price, quantity)
 
-    def reverse_repo(self, symbol: str, price: float, qty: int, delay=0.2) -> tuple:
+    def reverse_repo(self, symbol: str, price: float, quantity: int, delay=0.2) -> dict:
         """逆回购 R-001 SZ '131810'; GC001 SH '204001' """
-        return self.trade('reverse_repo', symbol, price, qty, delay=delay)
+        return self.trade('reverse_repo', symbol, price, quantity, delay=delay)
 
-    def cancel_all(self) -> tuple:  # 全撤
+    def cancel_all(self) -> dict:  # 全撤
         return self.trade('cancel_all')
 
-    def cancel_buy(self) -> tuple: # 撤买
+    def cancel_buy(self) -> dict: # 撤买
         return self.trade('cancel_buy')
 
-    def cancel_sell(self) -> tuple: # 撤卖
+    def cancel_sell(self) -> dict: # 撤卖
         return self.trade('cancel_sell')
 
-    def cancel(self, symbol='') -> tuple:
-        self.switch('cancel_order').wait(1)  # have to
-        editor = self.get_handle('cancel_order')
+    def cancel(self, symbol='') -> dict:
+        self.switch('cancel').wait(1)  # have to
+        editor = self.get_handle('cancel')
         if isinstance(symbol, str):
             self.fill(symbol, editor)
             for _ in range(10):
@@ -375,12 +383,12 @@ class Client:
                     break
         return self.click_button(label='撤单').answer()
 
-    def raffle(self):
+    def purchase_new(self):
         "新股申购"
         def func(ipo):
             symbol = ipo.get('新股代码') or ipo.get('证券代码')
             price = ipo.get('申购价格') or ipo.get('发行价格')
-            orders = self.entrustment
+            orders = self.query('order')
             had = [order['证券代码'] for order in orders]
             if symbol in had:
                 r = (0, '%s 已经申购' % symbol)
@@ -390,9 +398,9 @@ class Client:
                 r = (0, '不可预测的申购错误')
             return r
 
-        target = self.new
+        target = self.query('new')
         if target:
-            return [func(ipo) for ipo in target]
+            return {'puppet': [func(ipo) for ipo in target]}
 
     def fund_purchase(self, symbol: str, amount: int):
         """基金申购"""
@@ -402,25 +410,20 @@ class Client:
         """基金赎回"""
         return self.trade('redeem', symbol, share)
 
-    def query(self, category):
+    def query(self, category: str='summary'):
         """realtime trading data
+        category: 'summary', 'position', 'order', 'deal', 'undone', 'historical_deal'
+        'delivery_order', 'new', 'bingo'其中之一
         2019-5-19 加入数据缓存功能
         2020-2-6 修复 if-elif
         """
         print('Querying {} on-line...'.format(category))
         self.switch(category)
 
-        if category not in self.ATTRS:
-            return 'Unknown'
-        elif category in ('account', 'mkt'):
-            return self._text(self.get_handle('account'))
-        elif category in ('assets', 'balance', 'free_bal', 'market_value'):
-            for _ in range(99):
-                data = self._text(self.get_handle(category))
-                if data:
-                    return float(data)
-                else:
-                    self.wait(0.05)
+        if category == 'summary':
+            time.sleep(1)  # temporary
+            rtn = dict((x, float(util.get_text(self._page, y))) for x,y in self.ctx.SUMMARY)
+            rtn.update(id=self.id)
         else:  # data sheet
             if user32.IsIconic(self.root):
                 # print('最小化')
@@ -428,16 +431,13 @@ class Client:
             user32.SetForegroundWindow(self.root)
             [self.wait(0.1) for _ in range(20) if user32.GetForegroundWindow() != self.root]
             string = export_data(self.filename)
-            return util.normalize(string, self.to_dict)
-
-    def __getattr__(self, attrname):
-        return self.query(attrname)
+            rtn = util.normalize(string, self.to_dict)
+        return rtn
 
     "Development"
 
     def __repr__(self):
-        return "<%s(ver=%s client=%s root=%s)>" % (
-            self.__class__.__name__, __version__, self.client, self.root)
+        return "<%s(ver=%s root=%s)>" % (self.__class__.__name__, __version__, self.root)
 
     def bind(self, arg='', **kwargs):
         """"
@@ -451,13 +451,13 @@ class Client:
             self.root = kwargs.get('root') or arg
         if self.visible(self.root):
             self.birthtime = time.ctime()
-            self.acc = self.account
             self.title = self.text(self.root)
             self.mkt = (0, 1) if self._text(
                 self.get_handle('mkt')).startswith('上海') else (1, 0)
             self.idx = 0
             self.init()
-            return self
+            return {'puppet': "{} 木偶准备就绪！".format(curr_time())}
+        return {'puppet': '标题错误或者客户端失联'}
 
     def visible(self, hwnd=None, times=0):
         for _ in range(times or 1):
@@ -470,16 +470,14 @@ class Client:
     def switch(self, name):
         self.heartbeat_stamp = time.time()
         assert self.visible(), "客户端已关闭或账户已登出"
-        node = name if isinstance(name, int) else self.NODE.get(name)
-        if user32.SendMessageW(self.root, MSG['WM_COMMAND'], 0x2000<<16|node, 0):
-            self._page = reduce(user32.GetDlgItem, self.PAGE, self.root)
+        node = name if isinstance(name, int) else self.ctx.NODE.get(name, 165)
+        if user32.SendMessageW(self.root, util.Msg.WM_COMMAND, 0x2000<<16|node, 0):
+            self._page = reduce(user32.GetDlgItem, self.ctx.PAGE, self.root)
             return self
 
     def init(self):
-        for name in self.INIT:
+        for name in self.ctx.INIT:
             self.switch(name).wait(0.3)
-
-        user32.ShowOwnedPopups(self.root, False)
 
         if util.check_input_mode(self.get_handle('buy')[0]) == 'KB' or self.keyboard:
             def func(*args, **kwargs):
@@ -489,8 +487,8 @@ class Client:
                 return self
             self.fill_and_submit = func
 
+        user32.ShowOwnedPopups(self.root, False)
         print("{} 木偶准备就绪！".format(curr_time()))
-
         return self
 
     def wait(self, timeout=0.5):
@@ -504,7 +502,7 @@ class Client:
         pyperclip.copy('')
 
         for _ in range(9):
-            user32.PostMessageW(h_table, MSG['WM_COMMAND'], MSG['COPY'], 0)
+            user32.PostMessageW(h_table, util.Msg.WM_COMMAND, util.Msg.COPY, 0)
 
             # 关闭验证码弹窗
             if self.copy_protection:
@@ -544,7 +542,7 @@ class Client:
         if action in ('cancel_all', 'cancel_buy', 'cancel_sell'):
             action = 'cancel'
         self.switch(action)
-        m = getattr(self, action.upper(), self.TABLE)
+        m = getattr(self.ctx, action.upper(), self.ctx.TABLE)
         if action in ('buy', 'buy2', 'sell', 'sell2', 'reverse_repo', 'cancel', 'purchase', 'redeem'):
             data = [user32.GetDlgItem(self._page, i) for i in m]
         else:
@@ -559,17 +557,17 @@ class Client:
             0: user32.GetWindowTextW,
             1: user32.GetClassNameW
         }.get(key)(obj, buf, 32)
-        # user32.SendMessageW(obj, MSG['WM_GETTEXT'], 32, buf)
+        # user32.SendMessageW(obj, util.Msg.WM_GETTEXT, 32, buf)
         return buf.value
 
     def _text(self, h_text=None, id_text=None):
         buf = ctypes.create_unicode_buffer(64)
         if id_text:
-            user32.SendDlgItemMessageW(self._page, id_text, MSG['WM_GETTEXT'],
+            user32.SendDlgItemMessageW(self._page, id_text, util.Msg.WM_GETTEXT,
                                        64, buf)
         else:
             user32.SendMessageW(h_text or next(self.members),
-                                MSG['WM_GETTEXT'], 64, buf)
+                                util.Msg.WM_GETTEXT, 64, buf)
         return buf.value
 
     def fill(self, text, h_edit=None, h_dialog=None, id_edit=None):
@@ -577,10 +575,10 @@ class Client:
         if text:
             text = str(text)
             if h_edit:
-                user32.SendMessageW(h_edit, MSG['WM_SETTEXT'], 0, text)
+                user32.SendMessageW(h_edit, util.Msg.WM_SETTEXT, 0, text)
             else:
                 user32.SendDlgItemMessageW(h_dialog, id_edit,
-                                           MSG['WM_SETTEXT'], 0, text)
+                                           util.Msg.WM_SETTEXT, 0, text)
         return self
 
     def click_button(self, label='', btn_id=1006, h_dialog=None):
@@ -588,13 +586,13 @@ class Client:
         if label:
             btn_h = user32.FindWindowExW(h_dialog, 0, 'Button', label)
             btn_id = user32.GetDlgCtrlID(btn_h)
-        user32.PostMessageW(h_dialog, MSG['WM_COMMAND'], btn_id, 0)
+        user32.PostMessageW(h_dialog, util.Msg.WM_COMMAND, btn_id, 0)
         return self
 
     def click_key(self, keyCode, param=0):  # 单击按键
         if keyCode:
-            user32.PostMessageW(self._page, MSG['WM_KEYDOWN'], keyCode, param)
-            user32.PostMessageW(self._page, MSG['WM_KEYUP'], keyCode, param)
+            user32.PostMessageW(self._page, util.Msg.WM_KEYDOWN, keyCode, param)
+            user32.PostMessageW(self._page, util.Msg.WM_KEYUP, keyCode, param)
         return self
 
     def grab(self, hParent=None):
@@ -646,12 +644,12 @@ class Client:
                 hwndChildAfter = None
                 for _ in range(9):
                     hButton = user32.FindWindowExW(hPopup, hwndChildAfter, 'Button', 0)
-                    user32.SendMessageW(hButton, MSG['WM_GETTEXT'], 64, buf)
+                    user32.SendMessageW(hButton, util.Msg.WM_GETTEXT, 64, buf)
                     if buf.value in ('是(&Y)', '确定'):
                         label = buf.value
                         break
                     hwndChildAfter = hButton
-                user32.SendMessageW(hTips, MSG['WM_GETTEXT'], 64, buf)
+                user32.SendMessageW(hTips, util.Msg.WM_GETTEXT, 64, buf)
                 self.click_button(label, h_dialog=hPopup)
                 break
         text = buf.value
@@ -662,22 +660,22 @@ class Client:
         for _ in range(3):
             text = self.capture()
             if '编号' in text:
-                return re.findall(r'(\w*[0-9]+)\w*', text)[0], text
-            for x in self.ERROR:
+                return {'puppet': (re.findall(r'(\w*[0-9]+)\w*', text)[0], text)}
+            for x in self.ctx.ERROR:
                 if x in text:
-                    return (False, text)
-        return False, '弹窗捕获失败，请用puppet_util.check_config(path_to_xiadan.inf)检查设置'
+                    return {'puppet': (0, text)}
+        return {'puppet': (0, '弹窗捕获失败，请用check_config()检查设置')}
 
     def refresh(self):
         print('Refreshing page...')
-        user32.PostMessageW(self.root, MSG['WM_COMMAND'], self.FRESH, 0)
+        user32.PostMessageW(self.root, util.Msg.WM_COMMAND, self.ctx.FRESH, 0)
         return self if self.visible() else False
 
     def switch_combo(self, hCombo=None):
         handle = hCombo or next(self.members)
         user32.SendMessageW(
-            user32.GetParent(handle), MSG['WM_COMMAND'],
-            MSG['CBN_SELCHANGE'] << 16 | user32.GetDlgCtrlID(handle), handle)
+            user32.GetParent(handle), util.Msg.WM_COMMAND,
+            util.Msg.CBN_SELCHANGE << 16 | user32.GetDlgCtrlID(handle), handle)
         return self
 
     def switch_mkt(self, symbol: str, handle: int):
@@ -687,7 +685,7 @@ class Client:
         """
         index = self.mkt[0] if symbol.startswith(
             ('6', '5', '7', '11')) else self.mkt[1]
-        user32.SendMessageW(handle, MSG['CB_SETCURSEL'], index, 0)
+        user32.SendMessageW(handle, util.Msg.CB_SETCURSEL, index, 0)
         return self.switch_combo(handle)
 
     def switch_way(self, index):
@@ -695,16 +693,13 @@ class Client:
         handle = next(self.members)
         if index not in (1, 2, 3, 4, 5):
             index = 0
-        user32.SendMessageW(handle, MSG['CB_SETCURSEL'], index, 0)
+        user32.SendMessageW(handle, util.Msg.CB_SETCURSEL, index, 0)
         return self.switch_combo(handle)
 
     def if_fund(self, symbol, price):
         if symbol.startswith('5'):
             if len(str(price).split('.')[1]) == 3:
                 self.capture()
-
-    def summary(self):
-        return vars(self)
 
     def make_heartbeat(self, time_interval=1680):
         """2019-6-6 新增方法制造心跳
@@ -735,7 +730,7 @@ class Client:
         """有bug未修复！ get latest deal price"""
         self.switch('sell')
         code_h, *_, page_h = self.get_handle('sell')
-        handle = user32.GetDlgItem(page_h, self.QUOTE)
+        handle = user32.GetDlgItem(page_h, self.ctx.QUOTE)
         names = ['code', 'price']
         if isinstance(codes, str):
             codes = [codes]
