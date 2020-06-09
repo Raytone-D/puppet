@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "1.0.0"
+__version__ = "1.0.1"
 __license__ = 'MIT'
 
 import ctypes
@@ -439,7 +439,7 @@ class Account:
     def __repr__(self):
         return "<%s(ver=%s root=%s)>" % (self.__class__.__name__, __version__, self.root)
 
-    def bind(self, arg='', **kwargs):
+    def bind(self, arg='', dirname: str='', **kwargs):
         """"
         :arg: 客户端的标题或根句柄
         :mkt: 交易市场的索引值
@@ -456,6 +456,7 @@ class Account:
                 self.get_handle('mkt')).startswith('上海') else (1, 0)
             self.idx = 0
             self.init()
+            self.filename = '{}\\table.xls'.format(dirname or lacate_folder())
             return {'puppet': "{} 木偶准备就绪！".format(curr_time())}
         return {'puppet': '标题错误或者客户端失联'}
 
