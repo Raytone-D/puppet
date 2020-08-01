@@ -9,6 +9,7 @@ from .client import Account, __version__
 
 
 def run(host='127.0.0.1', port=10086):
+    '''Puppet's HTTP Service'''
     from bottle import post, run, request, response
 
     @post('/puppet')

@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "1.0.1"
+__version__ = "1.0.2"
 __license__ = 'MIT'
 
 import ctypes
@@ -150,6 +150,11 @@ class Ths:
         'reverse_repo': 717,
         'purchase': 433,
         'redeem': 434,
+        'margin': 454,  # 融资融券、保证金
+        'margin_pos': 454,
+        'buy_on_margin': 448,  # 融资买入
+        'sell_for_repayment': 449,  # 卖券还款
+        'discount': 466,  # 可充抵保证金证券折扣率
         'batch': 5170,
         'bingo': 1070
     }
@@ -161,7 +166,7 @@ class Ths:
     TABLE = (1047, 200, 1047)
     SUMMARY_ = (1308, 200, 1308)
     SUMMARY = (('cash', 1016), ('frozen', 1013), ('balance', 1012),
-        ('market_value', 1014), ('equity', 1015))
+        ('market_value', 1014), ('equity', 1015), ('position_pct', 1019))
     # symbol, price, max_qty, quantity, quote
     BUY = (1032, 1033, 1034, 0, 1018)
     SELL = (1032, 1033, 1034, 0, 1038)
@@ -174,6 +179,9 @@ class Ths:
     PAGE = 59648, 59649
     FRESH = 32790
     QUOTE = 1024
+    MARGIN = (('id', 10001), ('guarantee_rate', 10003), ('margin', 10006),
+        ('cash', 10008), ('frozen', 10009), ('balance', 10007),
+        ('market_value', 10010), ('equity', 10032), ('debts', 10005), ('assets', 10004))
     ERROR = ['无可撤委托', '提交失败', '当前时间不允许委托']
     WAY = {
         0: "LIMIT              限价委托 沪深",
@@ -190,7 +198,7 @@ class Account:
     '''Puppet Trading Account API'''
 
     def __init__(self, accinfos={}, enable_heartbeat=True, copy_protection=False,\
-        to_dict=True, dirname='', keyboard=False, title=None, **kwargs):
+        to_dict=True, dirname='', keyboard=True, title=None, **kwargs):
         self.accinfos = accinfos
         self.enable_heartbeat = enable_heartbeat
         self.copy_protection = copy_protection
@@ -218,7 +226,6 @@ class Account:
         elif self.title:
             self.bind(self.title)
 
-        self.make_heartbeat()
 
     def __get_node(self) -> int:
         node = self.ctx.PAGE
@@ -236,9 +243,6 @@ class Account:
         except Exception as e:
             # task.update({'msg': e})
             return {'msg': e}
-
-    def wrap(self, action: str, task: dict):
-        pass
 
     def run(self, exe_path):
         assert 'xiadan' in subprocess.os.path.basename(exe_path).split('.')\
@@ -317,8 +321,7 @@ class Account:
         self.click_button(label)
         return self
 
-    @property
-    def id(self):
+    def __get_id(self):
         return util.get_text(self.get_handle('account'), 1711)
 
     def trade(self, action: str, symbol: str ='', *args, delay: float =0.1) -> dict:
@@ -339,7 +342,7 @@ class Account:
             5 ALL_OR_CANCEL      全额成交或撤销 深圳
         """
         self.switch(action)
-        if action in ('buy', 'sell', 'reverse_repo', 'perchase', 'redeem'):
+        if action in ('buy', 'sell', 'reverse_repo', 'purchase', 'redeem'):
             self.switch_mkt(symbol, self.get_handle('mkt'))
         self._handles = self.get_handle(action)
         label = {'cancel_all': '全撤(Z /)',
@@ -413,17 +416,17 @@ class Account:
     def query(self, category: str='summary'):
         """realtime trading data
         category: 'summary', 'position', 'order', 'deal', 'undone', 'historical_deal'
-        'delivery_order', 'new', 'bingo'其中之一
+        'delivery_order', 'new', 'bingo', 'margin', 'margin_pos', 'discount' 其中之一
         2019-5-19 加入数据缓存功能
         2020-2-6 修复 if-elif
         """
         print('Querying {} on-line...'.format(category))
         self.switch(category)
 
-        if category == 'summary':
+        if category in ('summary', 'margin'):
             time.sleep(1)  # temporary
-            rtn = dict((x, float(util.get_text(self._page, y))) for x,y in self.ctx.SUMMARY)
-            rtn.update(id=self.id)
+            rtn = dict((x, float(util.get_text(self._page, y))) for x,y in getattr(self.ctx, category.upper()))
+            rtn.update(login_id=self.__get_id(), token=id(self))
         else:  # data sheet
             if user32.IsIconic(self.root):
                 # print('最小化')
@@ -433,6 +436,17 @@ class Account:
             string = export_data(self.filename)
             rtn = util.normalize(string, self.to_dict)
         return rtn
+
+
+    def buy_on_margin(self, symbol: str, price, quantity: int) -> dict:
+        '''融资买入'''
+        return self.trade('buy_on_margin', symbol, price, quantity)
+
+
+    def sell_for_repayment(self, symbol: str, price, quantity: int) -> dict:
+        '''卖券还款'''
+        return self.trade('sell_for_repayment', symbol, price, quantity)
+
 
     "Development"
 
@@ -480,7 +494,7 @@ class Account:
         for name in self.ctx.INIT:
             self.switch(name).wait(0.3)
 
-        if util.check_input_mode(self.get_handle('buy')[0]) == 'KB' or self.keyboard:
+        if self.keyboard:
             def func(*args, **kwargs):
                 user32.SetForegroundWindow(self._page)
                 for text in args:
@@ -489,6 +503,9 @@ class Account:
             self.fill_and_submit = func
 
         user32.ShowOwnedPopups(self.root, False)
+
+        self.make_heartbeat()
+
         print("{} 木偶准备就绪！".format(curr_time()))
         return self
 
@@ -709,14 +726,16 @@ class Account:
         def refresh_page(time_interval):
             while self.enable_heartbeat:
                 if not self.visible():
-                    print("OFFLINE!")
+                    print("客户端离线(Off-line)!")
+                    break
                 stamp = self.heartbeat_stamp
                 remainder = time_interval - (time.time() - stamp)
                 secs = random.uniform(remainder/2, remainder)
+                print('Refreshing after {} minutes.'.format(secs/60))
                 time.sleep(secs)
 
                 # 若在休眠期间心跳印记没被修改，则刷新页面并修改心跳印记
-                if stamp == self.heartbeat_stamp:
+                if self.visible() and stamp == self.heartbeat_stamp:
                     # print('Making heartbeat...')
                     self.refresh()
                     self.heartbeat_stamp = time.time()

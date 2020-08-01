@@ -5,6 +5,7 @@ import ctypes
 import datetime
 import io
 import os
+import threading
 import time
 
 from ctypes.wintypes import WORD, DWORD
@@ -92,13 +93,29 @@ OPTIONS = {
 user32 = ctypes.windll.user32
 
 
+def capture_popup(time_interval=0.5):
+    ''' 弹窗截获 '''
+
+    def capture(time_interval):
+        while True:
+            # secs = random.uniform(remainder/2, remainder)
+            # 若在休眠期间心跳印记没被修改，则刷新页面并修改心跳印记
+            time.sleep(secs)
+
+    threading.Thread(
+        target=capture,
+        kwargs={'time_interval': time_interval},
+        name='capture_popup',
+        daemon=True).start()
+
+
 def normalize(string: str, to_dict=False):
     '''标准化输出交易数据'''
     df = pd.read_csv(io.StringIO(string), sep='\t', dtype={'证券代码': str})
     df.drop(columns=[x for x in df.columns if x not in COLNAMES], inplace=True)
     df.columns = [COLNAMES.get(x) for x in df.columns]
     if 'amount' in df.columns:
-        df['ratio'] = df['amount'] / df['amount'].sum()
+        df['ratio'] = (df['amount'] / df['amount'].sum()).round(2)
     return df.to_dict('list') if to_dict else df
 
 
@@ -135,7 +152,7 @@ def get_text(h_parent, text_id):
     '获取控件文本内容'
     buf = ctypes.create_unicode_buffer(64)
     user32.SendDlgItemMessageW(h_parent, text_id, Msg.WM_GETTEXT, 64, buf)
-    return buf.value
+    return buf.value.rstrip('%')
 
 
 def check_config(folder=None, encoding='gb18030'):
