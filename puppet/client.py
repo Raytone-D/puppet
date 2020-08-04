@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "1.0.2"
+__version__ = "1.0.3"
 __license__ = 'MIT'
 
 import ctypes
@@ -155,6 +155,9 @@ class Ths:
         'buy_on_margin': 448,  # 融资买入
         'sell_for_repayment': 449,  # 卖券还款
         'discount': 466,  # 可充抵保证金证券折扣率
+        'margin_cancel_all': 465,
+        'margin_cancel_buy': 465,
+        'margin_cancel_sell': 465,
         'batch': 5170,
         'bingo': 1070
     }
@@ -182,6 +185,8 @@ class Ths:
     MARGIN = (('id', 10001), ('guarantee_rate', 10003), ('margin', 10006),
         ('cash', 10008), ('frozen', 10009), ('balance', 10007),
         ('market_value', 10010), ('equity', 10032), ('debts', 10005), ('assets', 10004))
+    BUTTON = {'cancel_all': '全撤(Z /)', 'cancel_buy': '撤买(X)', 'cancel_sell': '撤卖(C)',
+        'margin_cancel_all': '全撤(Z /)', 'margin_cancel_buy': '撤买(X)', 'margin_cancel_sell': '撤卖(C)'}
     ERROR = ['无可撤委托', '提交失败', '当前时间不允许委托']
     WAY = {
         0: "LIMIT              限价委托 沪深",
@@ -344,14 +349,12 @@ class Account:
         self.switch(action)
         if action in ('buy', 'sell', 'reverse_repo', 'purchase', 'redeem'):
             self.switch_mkt(symbol, self.get_handle('mkt'))
-        self._handles = self.get_handle(action)
-        label = {'cancel_all': '全撤(Z /)',
-                 'cancel_buy': '撤买(X)',
-                 'cancel_sell': '撤卖(C)'}.get(action)
-        if action in ('cancel', 'cancel_all', 'cancel_buy', 'cancel_sell'):
+        elif 'cancel' in action:
             data = self.query('undone')
             if not len(data):
                 self.wait()
+        self._handles = self.get_handle(action)
+        label = self.ctx.BUTTON.get(action)
         return self.fill_and_submit(symbol, *args, delay=delay, label=label).wait().answer()
         # return self.fill(quantity or full).click_button(label={'buy': '买入[B]','sell': '卖出[S]','reverse_repo': '确定'}[action])
 
@@ -365,14 +368,14 @@ class Account:
         """逆回购 R-001 SZ '131810'; GC001 SH '204001' """
         return self.trade('reverse_repo', symbol, price, quantity, delay=delay)
 
-    def cancel_all(self) -> dict:  # 全撤
-        return self.trade('cancel_all')
+    def cancel_all(self, acctype=0) -> dict:  # 全撤
+        return self.trade('margin_cancel_all'if acctype in (1, 'margin') else 'cancel_all')
 
-    def cancel_buy(self) -> dict: # 撤买
-        return self.trade('cancel_buy')
+    def cancel_buy(self, acctype=0) -> dict: # 撤买
+        return self.trade('margin_cancel_buy' if acctype in (1, 'margin') else 'cancel_buy')
 
-    def cancel_sell(self) -> dict: # 撤卖
-        return self.trade('cancel_sell')
+    def cancel_sell(self, acctype=0) -> dict: # 撤卖
+        return self.trade('margin_cancel_sell' if acctype in (1, 'margin') else 'cancel_sell')
 
     def cancel(self, symbol='') -> dict:
         self.switch('cancel').wait(1)  # have to
@@ -437,16 +440,13 @@ class Account:
             rtn = util.normalize(string, self.to_dict)
         return rtn
 
-
     def buy_on_margin(self, symbol: str, price, quantity: int) -> dict:
         '''融资买入'''
         return self.trade('buy_on_margin', symbol, price, quantity)
 
-
     def sell_for_repayment(self, symbol: str, price, quantity: int) -> dict:
         '''卖券还款'''
         return self.trade('sell_for_repayment', symbol, price, quantity)
-
 
     "Development"
 
