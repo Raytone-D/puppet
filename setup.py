@@ -10,7 +10,7 @@ REQUIRES_PYTHON = '>=3.4.0'
 setup(
     name='puppet',
     version=VERSION,
-    description=("一个用来交易A股的应用编程接口"),
+    description=("一个用来交易沪深A股的应用编程接口"),
     license='MIT',
     author='Raytone-D',
     author_email='raytone@qq.com',
