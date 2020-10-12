@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "1.1.0"
+__version__ = "1.2.0"
 __license__ = 'MIT'
 
 import ctypes
@@ -76,14 +76,20 @@ def lacate_folder(name='Personal'):
     return winreg.QueryValueEx(key, name)[0]  # dir, type
 
 
-def wait_for_popup():
+def wait_for_popup(root=None):
     buf = ctypes.create_unicode_buffer(64)
     for _ in range(9):
-        hwnd = user32.GetForegroundWindow()
+        hwnd = user32.GetForegroundWindow() if root is None else user32.GetLastActivePopup(root)
         user32.GetWindowTextW(hwnd, buf, 64)
         if buf.value == '另存为' and user32.IsWindowVisible(hwnd):
-            break
+            print("wait_for_popup 存在另存为的窗口")
+            return True
+        elif buf.value == '确认另存为' and user32.IsWindowVisible(hwnd):
+            print("wait_for_popup 存在确认另存为窗口")
+            simulate_shortcuts(13)
+            return True
         time.sleep(0.2)
+    return False
 
 
 def simulate_shortcuts(key1, key2=None):
@@ -97,27 +103,35 @@ def simulate_shortcuts(key1, key2=None):
     user32.keybd_event(key1, scan1, KEYEVENTF_KEYUP, 0)
 
 
-def export_data(path: str):
+def export_data(path: str, root=None):
     VK_CONTROL = 17
     VK_ALT = 18
     VK_S = 83
-    for x in range(99):
+    if os.path.exists(path):
+        print('删除旧文件' + path)
+        os.remove(path)
+    for x in range(9):  # retry 99 times
         simulate_shortcuts(VK_CONTROL, VK_S)  # 右键保存 Ctrl+S
-        wait_for_popup()
-        simulate_shortcuts(VK_ALT, VK_S)  # 按钮保存 Alt+S 或 回车键
-        for i in range(99):
+        if wait_for_popup(root):
+            simulate_shortcuts(VK_ALT, VK_S)  # 按钮保存 Alt+S 或 回车键
             time.sleep(0.05)
+        for i in range(99):
+            print('try_read_file_content, times: %s' % i)
+            time.sleep(0.05)
+            if not os.path.exists(path):
+                continue
             try:
-                with open(path) as f:
+                with open(path) as f:  # try to acquire file lock and read file content
                     string = f.read()
             except Exception:
                 continue
             else:
                 os.remove(path)
                 if string:
-                    print(x, i, 'DONE!')
+                    print('cost %s seconds, DONE!' % (x * i * 0.05))
                     return string
                 break
+    return ''
 
 
 class Ths:
@@ -434,10 +448,14 @@ class Account:
             if user32.IsIconic(self.root):
                 # print('最小化')
                 user32.ShowWindow(self.root, 9)
-            user32.SetForegroundWindow(self.root)
-            [self.wait(0.1) for _ in range(20) if user32.GetForegroundWindow() != self.root]
-            string = export_data(self.filename)
-            rtn = util.normalize(string, self.to_dict)
+                self.wait(0.1)
+                print('cur last window handle', user32.GetLastActivePopup(self.root))
+            user32.SwitchToThisWindow(self.root)  # 切换窗口
+            user32.SetForegroundWindow(self.root)  # 设置前台窗口
+            self.switch('undone')
+            self.switch(category)
+            string = export_data(self.filename, self.root)
+            rtn = util.normalize(string, self.to_dict) if isinstance(string, str) and len(string) > 0 else {}
         return rtn
 
     def buy_on_margin(self, symbol: str, price, quantity: int) -> dict:
@@ -452,6 +470,12 @@ class Account:
 
     def __repr__(self):
         return "<%s(ver=%s root=%s)>" % (self.__class__.__name__, __version__, self.root)
+
+    def restart(self):
+        # 脱把重新寻找窗口
+        self.get_handle.cache_clear()  # 清空操作句柄缓存
+        self.root = user32.FindWindowW(0, self.title)
+        self.set_focus()
 
     def bind(self, arg='', dirname: str='', **kwargs):
         """"
@@ -481,6 +505,39 @@ class Account:
                 return True
             elif times > 0:
                 self.wait()
+        return False
+
+    def set_focus(self):
+        if user32.IsIconic(self.root):
+            print('窗口被最小化')
+            user32.ShowWindow(self.root, 9)
+            self.wait(0.1)
+        user32.SwitchToThisWindow(self.root)  # 切换窗口
+        user32.SetForegroundWindow(self.root)  # 设置前台窗口
+        handle = user32.GetLastActivePopup(self.root)  # 获取浮窗
+        buf = ctypes.create_unicode_buffer(64)
+        while handle != self.root:
+            # user32.SwitchToThisWindow(handle)
+            user32.GetWindowTextW(handle, buf, 64)
+            if buf.value == '确认另存为' and user32.IsWindowVisible(handle):
+                print("set_focus 存在确认另存为的窗口", handle)
+                user32.SwitchToThisWindow(handle)
+                simulate_shortcuts(0x0D)  # 发送回车键
+                time.sleep(0.1)
+                handle = user32.GetLastActivePopup(self.root)
+                user32.GetWindowTextW(handle, buf, 64)
+                if buf.value == '另存为' and user32.IsWindowVisible(handle):  # 弹窗标题
+                    print("set_focus 存在另存为的窗口", handle)
+                    user32.PostMessageW(handle, util.Msg.WM_CLOSE, 0, 0)
+            elif buf.value == '另存为' and user32.IsWindowVisible(handle):  # 弹窗标题
+                print("set_focus 存在另存为的窗口", handle)
+                # simulate_shortcuts(0x0D)  # 发送回车键
+                user32.PostMessageW(handle, util.Msg.WM_CLOSE, 0, 0)
+            else:
+                simulate_shortcuts(0x0D)  # 发送回车键
+            handle = user32.GetLastActivePopup(self.root)  # 获取浮窗
+            time.sleep(0.1)
+        user32.SwitchToThisWindow(self.root)  # 切换窗口
 
     def switch(self, name):
         self.heartbeat_stamp = time.time()
@@ -493,6 +550,7 @@ class Account:
     def init(self):
         for name in self.ctx.INIT:
             self.switch(name).wait(0.3)
+        self.switch('position')
 
         if self.keyboard:
             def func(*args, **kwargs):
@@ -502,7 +560,8 @@ class Account:
                 return self
             self.fill_and_submit = func
 
-        user32.ShowOwnedPopups(self.root, False)
+        user32.ShowOwnedPopups(self.root, True)
+        self.set_focus()
 
         self.make_heartbeat()
 
@@ -687,6 +746,7 @@ class Account:
     def refresh(self):
         print('Refreshing page...')
         user32.PostMessageW(self.root, util.Msg.WM_COMMAND, self.ctx.FRESH, 0)
+        self.set_focus()
         return self if self.visible() else False
 
     def switch_combo(self, hCombo=None):
