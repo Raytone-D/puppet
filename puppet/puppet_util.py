@@ -52,6 +52,7 @@ COLNAMES = {
     '市值': 'amount',
     '参考市值': 'amount',  # 银河证券
     '最新市值': 'amount',  # 国金|平安证券
+    '成本价': 'cost',
     '成交时间': 'time',
     '成交日期': 'date',
     '成交数量': 'quantity',
