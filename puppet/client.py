@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "1.2.0"
+__version__ = "1.2.3"
 __license__ = 'MIT'
 
 import ctypes
@@ -110,27 +110,28 @@ def export_data(path: str, root=None):
     if os.path.exists(path):
         print('删除旧文件' + path)
         os.remove(path)
-    for x in range(9):  # retry 99 times
+    for _ in range(3):
         simulate_shortcuts(VK_CONTROL, VK_S)  # 右键保存 Ctrl+S
-        if wait_for_popup(root):
-            simulate_shortcuts(VK_ALT, VK_S)  # 按钮保存 Alt+S 或 回车键
-            time.sleep(0.05)
-        for i in range(99):
-            print('try_read_file_content, times: %s' % i)
-            time.sleep(0.05)
-            if not os.path.exists(path):
-                continue
-            try:
-                with open(path) as f:  # try to acquire file lock and read file content
-                    string = f.read()
-            except Exception:
-                continue
-            else:
-                os.remove(path)
-                if string:
-                    print('cost %s seconds, DONE!' % (x * i * 0.05))
-                    return string
-                break
+        for _ in range(9):
+            time.sleep(0.05)  # DON'T REMOVE!
+            if user32.GetLastActivePopup(root) != root:
+                if wait_for_popup(root):
+                    simulate_shortcuts(VK_ALT, VK_S)  # 按钮保存 Alt+S 或 回车键
+                    time.sleep(0.05)
+                    for i in range(99):
+                        time.sleep(0.05)
+                        if not os.path.exists(path):
+                            continue
+                        try:
+                            with open(path) as f:  # try to acquire file lock and read file content
+                                string = f.read()
+                        except Exception:
+                            continue
+                        else:
+                            os.remove(path)
+                            if string:
+                                return string
+                            break
     return ''
 
 
@@ -445,15 +446,14 @@ class Account:
             rtn = dict((x, float(util.get_text(self._page, y))) for x,y in getattr(self.ctx, category.upper()))
             rtn.update(login_id=self.__get_id(), token=id(self))
         else:  # data sheet
-            if user32.IsIconic(self.root):
-                # print('最小化')
-                user32.ShowWindow(self.root, 9)
-                self.wait(0.1)
-                print('cur last window handle', user32.GetLastActivePopup(self.root))
-            user32.SwitchToThisWindow(self.root)  # 切换窗口
-            user32.SetForegroundWindow(self.root)  # 设置前台窗口
-            self.switch('undone')
-            self.switch(category)
+            mini = user32.IsIconic(self.root)
+            for _ in range(99):
+                user32.SwitchToThisWindow(self.root, True)
+                self.wait(0.01) # DON'T REMOVE!
+                if user32.GetForegroundWindow() == self.root:
+                    if mini:
+                        print('如果返回空值，请先查一下"order"或"deal"，再查其他的。')
+                    break
             string = export_data(self.filename, self.root)
             rtn = util.normalize(string, self.to_dict) if isinstance(string, str) and len(string) > 0 else {}
         return rtn
