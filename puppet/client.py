@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "1.2.3"
+__version__ = "1.3.1"
 __license__ = 'MIT'
 
 import ctypes
@@ -25,7 +25,7 @@ from functools import reduce, lru_cache
 from collections import OrderedDict
 from importlib import import_module
 
-from . import puppet_util as util
+from . import util
 
 
 user32 = ctypes.windll.user32
@@ -231,6 +231,7 @@ class Account:
     def _post_init(self):
         self.heartbeat_stamp = time.time()
         self.root = 0
+        self.id = None
         self.ctx = Ths
         self.filename = '{}\\table.xls'.format(self.dirname or lacate_folder())
         self.loginfile = '{}\\login.json'.format(self.dirname or lacate_folder())
@@ -564,6 +565,7 @@ class Account:
         self.set_focus()
 
         self.make_heartbeat()
+        self.id = self.__get_id()
 
         print("{} 木偶准备就绪！".format(curr_time()))
         return self

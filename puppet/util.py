@@ -8,7 +8,7 @@ import os
 import threading
 import time
 
-from ctypes.wintypes import WORD, DWORD
+from ctypes.wintypes import WORD, DWORD, BOOL, HWND
 
 try:
     import pandas as pd
@@ -171,6 +171,27 @@ def check_config(folder=None, encoding='gb18030'):
         name, val = section.get(key).split(';')[3:5]
         if val != value:
             print(name, val, '改为', value, '\n')
+
+
+def find_all():
+    '''获取全部已登录的客户端的根句柄'''
+
+    def find(hwnd, extra):
+        buf = ctypes.create_unicode_buffer(32)
+        if user32.IsWindowVisible(hwnd):
+            user32.GetWindowTextW(hwnd, buf, 32)
+            if '交易系统' in buf.value:
+                # h_acc = reduce(user32.GetDlgItem, (59392, 0, 1711), hwnd)
+                # user32.SendMessageW(h_acc, 13, 32, buf)
+                # extra.update({int(buf.value): hwnd})
+                extra.append(hwnd)
+        return True
+
+    accounts = []
+    WNDENUMPROC = ctypes.WINFUNCTYPE(BOOL, HWND, ctypes.py_object)
+    user32.EnumChildWindows.argtypes = [HWND, WNDENUMPROC, ctypes.py_object]
+    user32.EnumChildWindows(0, WNDENUMPROC(find), accounts)
+    return accounts
 
 
 if __name__ == "__main__":
