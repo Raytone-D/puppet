@@ -127,7 +127,7 @@ def check_input_mode(h_edit, text='000001'):
     return 'WM' if user32.SendMessageW(h_edit, 14, 0, 0) == len(text) else 'KB'
 
 
-def get_root(key: list =['网上股票交易系统', '通达信']) -> tuple:
+def find_one(key: list =['交易系统', '通达信']) -> tuple:
     from ctypes.wintypes import BOOL, HWND, LPARAM
 
     @ctypes.WINFUNCTYPE(BOOL, HWND, LPARAM)
@@ -142,7 +142,7 @@ def get_root(key: list =['网上股票交易系统', '通达信']) -> tuple:
     buf = ctypes.create_unicode_buffer(64)
     handle = ctypes.c_ulong()
     user32.EnumWindows(callback)
-    return handle.value, buf.value
+    return handle.value
 
 
 def get_today():

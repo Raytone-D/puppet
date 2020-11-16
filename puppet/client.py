@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "1.3.1"
+__version__ = "1.3.2"
 __license__ = 'MIT'
 
 import ctypes
@@ -236,15 +236,12 @@ class Account:
         self.filename = '{}\\table.xls'.format(self.dirname or lacate_folder())
         self.loginfile = '{}\\login.json'.format(self.dirname or lacate_folder())
 
-        if self.title == '':
-            self.title = '网上股票交易系统5.0'
-
         if os.path.isfile(self.filename):
             os.remove(self.filename)
 
         if self.accinfos:
             self.login(**self.accinfos)
-        elif self.title:
+        elif self.title != None:
             self.bind(self.title)
 
 
@@ -483,7 +480,9 @@ class Account:
         :arg: 客户端的标题或根句柄
         :mkt: 交易市场的索引值
         """
-        if 'title' in kwargs or isinstance(arg, str):
+        if arg == '':
+            self.root = util.find_one()
+        elif 'title' in kwargs or isinstance(arg, str):
             self.root = user32.FindWindowW(0, kwargs.get('title') or (
                 arg or '网上股票交易系统5.0'))
         elif 'root' in kwargs or isinstance(arg, int):
