@@ -28,6 +28,7 @@ class Msg:
 
     WM_SETTEXT = 12
     WM_GETTEXT = 13
+    WM_GETTEXTLENGTH = 14
     WM_CLOSE = 16
     WM_KEYDOWN = 256
     WM_KEYUP = 257

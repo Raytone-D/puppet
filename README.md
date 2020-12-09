@@ -17,15 +17,16 @@ accinfo = {
 
 acc = puppet.login(accinfo)
 
-# 绑定已登录账户。个别券商要传入'核新网上交易系统x.xx'之类的标题
-acc = puppet.Client(title='')
+# 绑定已登录账户
+acc = puppet.Account(title='')
 
-# trade
 acc.buy('000001', 12.68, 100)
 acc.sell('000001', 12.68, 100)
+
+acc.cancel_buy('510050', 3.149, 100)
 acc.cancel_all()
 
-# query -> assets, market_value, balance, deals, entrustment, delivery_order
+acc.query('historical_deal')
 acc.query('position')
 ```
 

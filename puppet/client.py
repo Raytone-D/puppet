@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "1.3.2"
+__version__ = "1.4.4"
 __license__ = 'MIT'
 
 import ctypes
@@ -18,8 +18,6 @@ import random
 import threading
 import winreg
 import os
-import csv
-import sys
 
 from functools import reduce, lru_cache
 from collections import OrderedDict
@@ -191,7 +189,7 @@ class Ths:
     REVERSE_REPO = (1032, 1033, 1034, 0, 1018)
     BUY2 = (3451, 1032, 1541, 1033, 1018, 1034)
     SELL2 = (3453, 1035, 1542, 1058, 1019, 1039)
-    CANCEL = (3348,)
+    CANCEL = 3348,
     PURCHASE = (1032, 1034)
     REDEEM = (1032, 1034)
     PAGE = 59648, 59649
@@ -201,6 +199,7 @@ class Ths:
         ('cash', 10008), ('frozen', 10009), ('balance', 10007),
         ('market_value', 10010), ('equity', 10032), ('debts', 10005), ('assets', 10004))
     BUTTON = {'cancel_all': '全撤(Z /)', 'cancel_buy': '撤买(X)', 'cancel_sell': '撤卖(C)',
+        'cancel': '撤单', 'buy': '买入[B]','sell': '卖出[S]','reverse_repo': '确定',
         'margin_cancel_all': '全撤(Z /)', 'margin_cancel_buy': '撤买(X)', 'margin_cancel_sell': '撤卖(C)'}
     ERROR = ['无可撤委托', '提交失败', '当前时间不允许委托']
     WAY = {
@@ -362,14 +361,9 @@ class Account:
         self.switch(action)
         if action in ('buy', 'sell', 'reverse_repo', 'purchase', 'redeem'):
             self.switch_mkt(symbol, self.get_handle('mkt'))
-        elif 'cancel' in action:
-            data = self.query('undone')
-            if not len(data):
-                self.wait()
         self._handles = self.get_handle(action)
         label = self.ctx.BUTTON.get(action)
         return self.fill_and_submit(symbol, *args, delay=delay, label=label).wait().answer()
-        # return self.fill(quantity or full).click_button(label={'buy': '买入[B]','sell': '卖出[S]','reverse_repo': '确定'}[action])
 
     def buy(self, symbol: str, price, quantity: int) -> dict:
         return self.trade('buy', symbol, price, quantity)
@@ -381,26 +375,38 @@ class Account:
         """逆回购 R-001 SZ '131810'; GC001 SH '204001' """
         return self.trade('reverse_repo', symbol, price, quantity, delay=delay)
 
-    def cancel_all(self, acctype=0) -> dict:  # 全撤
-        return self.trade('margin_cancel_all'if acctype in (1, 'margin') else 'cancel_all')
+    def cancel_all(self) -> dict:
+        return self.cancel(action='cancel_all')
 
-    def cancel_buy(self, acctype=0) -> dict: # 撤买
-        return self.trade('margin_cancel_buy' if acctype in (1, 'margin') else 'cancel_buy')
+    def cancel_buy(self, symbol=None) -> dict:
+        '''2020-12-09 按代码撤买'''
+        return self.cancel(symbol, 'cancel_buy')
 
-    def cancel_sell(self, acctype=0) -> dict: # 撤卖
-        return self.trade('margin_cancel_sell' if acctype in (1, 'margin') else 'cancel_sell')
+    def cancel_sell(self, symbol=None) -> dict:
+        return self.cancel(symbol, 'cancel_sell')
 
-    def cancel(self, symbol='') -> dict:
+    def cancel(self, symbol: str, action: str = 'cancel') -> dict:
+        '''两融户需要在action参数加上前缀 margin_
+        2020-12-08 重构撤单代码
+        '''
         self.switch('cancel').wait(1)  # have to
-        editor = self.get_handle('cancel')
+
         if isinstance(symbol, str):
-            self.fill(symbol, editor)
-            for _ in range(10):
-                self.wait(0.3).click_button(label='查询代码')
-                hButton = user32.FindWindowExW(self._page, 0, 'Button', '撤单')
-                if user32.IsWindowEnabled(hButton):  # 撤单按钮的状态检查
+            h_edit = user32.GetDlgItem(self._page, 3348)
+            user32.SendMessageW(h_edit, util.Msg.WM_SETTEXT, 0, str(symbol))
+            h_button = user32.FindWindowExW(self._page, 0, 'Button', '撤单')
+
+            for _ in range(9):
+                if user32.SendMessageW(h_edit, util.Msg.WM_GETTEXTLENGTH, 0, 0) == len(symbol):
+                    self.click_button('查询代码')
                     break
-        return self.click_button(label='撤单').answer()
+                time.sleep(0.05)
+            for _ in range(9):
+                if user32.IsWindowEnabled(h_button):  # 撤单按钮是否可用
+                    break
+                time.sleep(0.05)
+
+        return self.click_button(self.ctx.BUTTON[action]).answer()
 
     def purchase_new(self):
         "新股申购"
