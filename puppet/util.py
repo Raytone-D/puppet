@@ -33,7 +33,11 @@ class Msg:
     WM_KEYDOWN = 256
     WM_KEYUP = 257
     WM_COMMAND = 273
+    BM_GETCHECK = 240
+    BM_SETCHECK = 241
+    BM_GETSTATE = 242
     BM_CLICK = 245
+    BST_CHECKED = 1
     CB_GETCOUNT = 326
     CB_SETCURSEL = 334
     CBN_SELCHANGE = 1
@@ -128,18 +132,23 @@ def check_input_mode(h_edit, text='000001'):
     return 'WM' if user32.SendMessageW(h_edit, 14, 0, 0) == len(text) else 'KB'
 
 
-def find_one(key: list =['交易系统', '通达信']) -> tuple:
+def find_one(keyword='交易系统') -> int:
+    '''找到最靠前的那个已登录的交易客户端
+    keyword: str or list
+    '''
     from ctypes.wintypes import BOOL, HWND, LPARAM
 
     @ctypes.WINFUNCTYPE(BOOL, HWND, LPARAM)
     def callback(hwnd, lparam):
         user32.GetWindowTextW(hwnd, buf, 64)
-        for s in key:
+        for s in keyword:
             if s in buf.value:
                 handle.value = hwnd
                 return False
         return True
 
+    if isinstance(keyword, str):
+        keyword = [keyword]
     buf = ctypes.create_unicode_buffer(64)
     handle = ctypes.c_ulong()
     user32.EnumWindows(callback)
