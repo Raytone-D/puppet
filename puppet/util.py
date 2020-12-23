@@ -41,6 +41,10 @@ class Msg:
     CB_GETCOUNT = 326
     CB_SETCURSEL = 334
     CBN_SELCHANGE = 1
+    MOUSEEVENTF_LEFTDOWN = 2
+    MOUSEEVENTF_LEFTUP = 4
+    MOUSEEVENTF_RIGHTDOWN = 8
+    MOUSEEVENTF_RIGHTUP = 16
 
 
 COLNAMES = {
@@ -202,6 +206,43 @@ def find_all():
     user32.EnumChildWindows.argtypes = [HWND, WNDENUMPROC, ctypes.py_object]
     user32.EnumChildWindows(0, WNDENUMPROC(find), accounts)
     return accounts
+
+
+def find_single_handle(h_dialog, keyword: str = '', classname='Static') -> int:
+    from ctypes.wintypes import BOOL, HWND, LPARAM
+
+    @ctypes.WINFUNCTYPE(BOOL, HWND, LPARAM)
+    def callback(hwnd, lparam):
+        user32.SendMessageW(hwnd, Msg.WM_GETTEXT, 64, buf)
+        user32.GetClassNameW(hwnd, buf1, 64)
+        if buf.value == keyword and buf1.value == classname:
+            handle.value = hwnd
+            return False
+        return True
+
+    buf = ctypes.create_unicode_buffer(64)
+    buf1 = ctypes.create_unicode_buffer(64)
+    handle = ctypes.c_ulong()
+    user32.EnumChildWindows(h_dialog, callback)
+    return handle.value
+
+
+def go_to_top(h_root: int):
+    '''窗口置顶'''
+    for _ in range(99):
+        if user32.GetForegroundWindow() == h_root:
+            return True
+        user32.SwitchToThisWindow(h_root, True)
+        time.sleep(0.01) # DON'T REMOVE!
+
+
+def get_rect(obj_handle, ext_rate=0):
+    '''locate the control'''
+    rect = ctypes.wintypes.RECT()
+    user32.GetWindowRect(obj_handle, ctypes.byref(rect))
+    user32.SetForegroundWindow(user32.GetParent(obj_handle))  # have to
+    return rect.left, rect.top, rect.right + (
+        rect.right - rect.left) * ext_rate, rect.bottom
 
 
 if __name__ == "__main__":

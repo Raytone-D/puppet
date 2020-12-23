@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "1.5.6"
+__version__ = "1.6.1"
 __license__ = 'MIT'
 
 import ctypes
@@ -34,14 +34,6 @@ curr_time = lambda : time.strftime('%Y-%m-%d %X')  # backward
 
 def login(accinfos):
     return Account(accinfos)
-
-
-def get_rect(obj_handle, ext_rate=0):
-    rect = ctypes.wintypes.RECT()
-    user32.GetWindowRect(obj_handle, ctypes.byref(rect))
-    user32.SetForegroundWindow(user32.GetParent(obj_handle))  # have to
-    return rect.left, rect.top, rect.right + (
-        rect.right - rect.left) * ext_rate, rect.bottom
 
 
 def grab(rect):
@@ -298,7 +290,7 @@ class Account:
             if user32.GetForegroundWindow() == self.h_login:
                 # 模拟键盘输入
                 util.keyboard.send(util.keyboard.KEY_UP)
-                info = (account_no, password, comm_pwd or image_to_string(grab(get_rect(self._IMG))))
+                info = (account_no, password, comm_pwd or image_to_string(grab(util.get_rect(self._IMG))))
                 for text in info:
                     util.fill(text)
                     time.sleep(1)
