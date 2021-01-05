@@ -3,7 +3,7 @@ option pal
 需要将锁屏时间设为最大值
 '''
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
-__version__ = "1.1"
+__version__ = "1.2"
 __license__ = 'MIT'
 
 
@@ -54,6 +54,8 @@ class Option:
         # 初始化页面
         for node in ('cancel', 'position', 'deal', 'send_order', 'portfolio'):
             self.switch(node)
+
+        time.sleep(0.5)  # compatible with low frequency
 
         h_panel = get_page_by_trait(self.root, '买入开仓', 'Button')
         self.h_edit = user32.FindWindowExW(h_panel, None, 'Edit', None)
