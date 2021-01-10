@@ -5,7 +5,7 @@
 """
 __author__ = "睿瞳深邃(https://github.com/Raytone-D)"
 __project__ = 'Puppet'
-__version__ = "1.6.2"
+__version__ = "1.6.3"
 __license__ = 'MIT'
 
 import ctypes
@@ -19,7 +19,7 @@ import threading
 import winreg
 import os
 
-from functools import reduce, lru_cache
+from functools import reduce, lru_cache, partial
 from collections import OrderedDict
 from importlib import import_module
 
@@ -235,6 +235,11 @@ class Account:
         elif self.title != None:
             self.bind(self.title)
 
+        self.cancel_all = partial(self.cancel, action='cancel_all')
+        self.cancel_buy = partial(self.cancel, action='cancel_buy')
+        self.cancel_sell = partial(self.cancel, action='cancel_sell')
+        self.cancel_buy.__doc__ = '撤销指定证券代码的买单'
+        self.cancel_sell.__doc__ = '撤销指定证券代码的卖单'
 
     def __get_node(self) -> int:
         node = self.ctx.PAGE
@@ -350,6 +355,7 @@ class Account:
             4 BEST5_OR_CANCEL    最优五档即时成交剩余撤销 深圳
             5 ALL_OR_CANCEL      全额成交或撤销 深圳
         """
+        util.go_to_top(self.root)
         self.switch(action)
         if action in ('buy', 'sell', 'reverse_repo', 'purchase', 'redeem'):
             self.switch_mkt(symbol, self.get_handle('mkt'))
@@ -367,20 +373,11 @@ class Account:
         """逆回购 R-001 SZ '131810'; GC001 SH '204001' """
         return self.trade('reverse_repo', symbol, price, quantity, delay=delay)
 
-    def cancel_all(self) -> dict:
-        return self.cancel(action='cancel_all')
-
-    def cancel_buy(self, symbol=None) -> dict:
-        '''2020-12-09 按代码撤买'''
-        return self.cancel(symbol, 'cancel_buy')
-
-    def cancel_sell(self, symbol=None) -> dict:
-        return self.cancel(symbol, 'cancel_sell')
-
-    def cancel(self, symbol: str, action: str = 'cancel') -> dict:
-        '''两融户需要在action参数加上前缀 margin_
+    def cancel(self, symbol: str = None, action: str = 'cancel') -> dict:
+        '''撤销指定证券代码的委托单。两融户需要在action参数加上前缀 margin_
         2020-12-08 重构撤单代码
         '''
+        util.go_to_top(self.root)
         self.switch('cancel').wait(1)  # have to
 
         if isinstance(symbol, str):
@@ -435,6 +432,9 @@ class Account:
         2020-2-6 修复 if-elif
         """
         print('Querying {} on-line...'.format(category))
+        if user32.IsIconic(self.root):
+            print('如果返回空值，请先查一下"order"或"deal"，再查其他的。')
+        util.go_to_top(self.root)
         self.switch(category)
 
         if category in ('summary', 'margin'):
@@ -442,14 +442,6 @@ class Account:
             rtn = dict((x, float(util.get_text(self._page, y))) for x,y in getattr(self.ctx, category.upper()))
             rtn.update(login_id=self.__get_id(), token=id(self))
         else:  # data sheet
-            mini = user32.IsIconic(self.root)
-            for _ in range(99):
-                user32.SwitchToThisWindow(self.root, True)
-                self.wait(0.01) # DON'T REMOVE!
-                if user32.GetForegroundWindow() == self.root:
-                    if mini:
-                        print('如果返回空值，请先查一下"order"或"deal"，再查其他的。')
-                    break
             string = export_data(self.filename, self.root)
             rtn = util.normalize(string, self.to_dict) if isinstance(string, str) and len(string) > 0 else {}
         return rtn
